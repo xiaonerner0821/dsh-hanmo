@@ -1,0 +1,66 @@
+{
+  "name": "@xiaonerner0821/dsh-hanmo",
+  "version": "1.0.1",
+  "description": "Hanmo (翰墨): an appearance plugin for the DeepSeek Harness Web UI — glowing outlined sidebar tiles, a comet-trace New Session button, six VS Code colour themes registered with DSH's theme service, font and text-colour controls, and a highlighted main-panel file preview.",
+  "type": "module",
+  "license": "MIT",
+  "author": "xiaonerner0821",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaonerner0821/dsh-hanmo.git"
+  },
+  "homepage": "https://github.com/xiaonerner0821/dsh-hanmo#readme",
+  "bugs": {
+    "url": "https://github.com/xiaonerner0821/dsh-hanmo/issues"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "theme",
+    "sidebar",
+    "fonts",
+    "ui"
+  ],
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.zh-CN.md",
+    "docs/theme-cards.png",
+    "CHANGELOG.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "check": "node --check client.js && node --check index.js",
+    "build:fonts": "node build-fonts.mjs",
+    "prepublishOnly": "npm run check"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "dsh": "^0.2.1-rc.1",
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": ["@deepseek-ai/dsh-client-ui-sidebar", "@deepseek-ai/dsh-client-ui-theme", "@deepseek-ai/dsh-client-ui-conversation"]
+    }
+  }
+}

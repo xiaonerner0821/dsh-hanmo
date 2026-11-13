@@ -1,0 +1,8 @@
+node_modules/
+*.tgz
+.DS_Store
+Thumbs.db
+# local debugging scripts (CDP probes etc.), kept out of the repository
+tools/
+# raw woff2 files written by build-fonts.mjs; client.js already embeds them
+fonts/
