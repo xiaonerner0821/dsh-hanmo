@@ -4,7 +4,11 @@
 
 [English](./README.md)
 
-![主题选择](./docs/theme-cards.png)
+![翰墨在浅色与深色之间切换，再轮转各套配色主题，「新会话」按钮上带彗星光效](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/hanmo.gif)
+
+完整宣传片（30 秒）：[hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.0.1/hanmo-daynight.mp4)
+
+![主题选择](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/theme-cards.png)
 
 ## 功能
 

@@ -21,3 +21,5 @@ First public release. Earlier builds (1.9.x) were private and shipped as
 
 - Appearance popover: added font-weight controls for body text and code (four steps: 300 · 400 · 500 · 600). The selection is persisted in `hanmo:look` and migrates forward with all other look settings.
 - New **DeepSeek Harness** entry in the theme picker (also in Settings > General): one click returns DSH to its unthemed look. It lifts the sidebar and main-panel skins, Han's dark palette, the text-colour, opacity and weight layers, and resets the fonts and sizes to DSH's built-in stack; the sizes come back when you leave it. The appearance button, the Settings row and the file preview tab stay, so switching back is one click. The plugin's own controls hide while it is active.
+- Fixed: the body-text weight now reaches assistant replies. DSH's Markdown wrapper and table cells set the `font` shorthand, which reset the inherited weight to 400, so only text outside Markdown changed. Table header cells keep their own heavier weight.
+- The sidebar build marker (`data-hanmo`) now reports 1.0.1.

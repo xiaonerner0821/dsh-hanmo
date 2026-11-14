@@ -636,8 +636,13 @@ body[data-cm-ink] ${F} [class*="_centerCol"] {
 /* main panel font weight. Only set when it differs from 400, so the default
  * look is untouched. Body text inherits it from the column; bold keeps a fixed
  * 200 step above body text, so it still stands out at 500 or 600. Controls
- * with a weight of their own (tabs, buttons, headings) keep theirs. */
-body[data-cm-weight] ${F} [class*="_centerCol"] { font-weight: var(--cm-w-text, 400); }
+ * with a weight of their own (tabs, buttons, headings) keep theirs. The
+ * Markdown wrapper and its table cells set the font shorthand, which resets
+ * the weight they would inherit, so they are named here too. Table header
+ * cells keep DSH's own heavier weight. */
+body[data-cm-weight] ${F} [class*="_centerCol"],
+body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"],
+body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"] td { font-weight: var(--cm-w-text, 400); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(strong, b) { font-weight: min(900, calc(var(--cm-w-text, 400) + 200)); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font-weight: var(--cm-w-code, 400); }
 `;
@@ -831,7 +836,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.0'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.1'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
