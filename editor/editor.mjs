@@ -93,7 +93,7 @@ export const TOKEN_CSS = `
 .cmk-com{color:var(--shiki-token-comment,#7f848e);font-style:italic}
 .cmk-fn{color:var(--shiki-token-function,#61afef)}
 .cmk-type{color:var(--shiki-token-parameter,#e5c07b)}
-.cmk-prop{color:var(--shiki-token-string-expression,#98c379)}
+.cmk-prop{color:var(--shiki-token-function,#61afef)}
 .cmk-tag{color:var(--shiki-token-keyword,#e06c75)}
 .cmk-fg{color:var(--shiki-foreground,inherit)}
 .cmk-ok{color:var(--dsw-alias-state-success-primary,#2f9e44)}
@@ -109,7 +109,8 @@ const highlight = HighlightStyle.define([
   { tag: [t.string, t.special(t.string), t.regexp], class: C.str },
   { tag: [t.number, t.bool, t.null, t.atom], class: C.num },
   { tag: [t.comment, t.lineComment, t.blockComment, t.docComment], class: C.com },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], class: C.fn },
+  // standard(variableName) = a legacy mode's "builtin" (shell commands like git / echo)
+  { tag: [t.function(t.variableName), t.function(t.propertyName), t.standard(t.variableName)], class: C.fn },
   { tag: [t.typeName, t.className, t.namespace], class: C.type },
   { tag: [t.propertyName, t.attributeName], class: C.prop },
   { tag: [t.tagName], class: C.tag },

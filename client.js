@@ -839,7 +839,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.3'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.4'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -2761,7 +2761,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     // draft exits; Tab indents (a tab for go/mk/Makefile, two spaces else).
     // stamped by editor/build.mjs: a chunk rebuild must change client.js, since
     // DSH serves the chunk under client.js's revision
-    const EDITOR_BUILD = '77e3aac6fc0d';
+    const EDITOR_BUILD = 'b2f069e47e54';
     let editorChunk = null;
     const loadEditorChunk = () => {
       if (!editorChunk) {
