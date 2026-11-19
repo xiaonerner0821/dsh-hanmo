@@ -11,6 +11,7 @@ and copyright line as published upstream.
 | [yetone/magpie](https://github.com/yetone/magpie) | The spring-driven selection shape that slides between sidebar rows | MIT, Copyright (c) 2026 yetone |
 | [liguobao/dsh-file-viewer](https://github.com/liguobao/dsh-file-viewer) | The pattern for registering a file preview as a `conversation.view` tab | MIT, Copyright (c) 2026 DSH File Viewer contributors |
 | [FAVKTOXIC/dsh-theme-liquid-glass](https://github.com/FAVKTOXIC/dsh-theme-liquid-glass) | The glass composer and its SVG displacement filter | MIT, Copyright (c) 2025 dsh-theme-liquid-glass contributors |
+| [CodeMirror 6](https://codemirror.net/) (`@codemirror/*`, `@lezer/*`, `style-mod`, `w3c-keyname`, `crelt`) | The file editor, bundled into `client.editor.js` | MIT, Copyright (C) 2018-2021 by Marijn Haverbeke and others |
 
 ## Colour themes
 

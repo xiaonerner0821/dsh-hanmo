@@ -535,6 +535,9 @@ ${F} [class*="_centerCol"] :is(p, li, td) > code {
 ${F} ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
 ${F}[data-cm-sel] [class*="_centerCol"] ::selection { background: transparent; }
 ${F}[data-cm-sel] [class*="_centerCol"] :is(input, textarea)::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
+/* the main-panel file view keeps the native highlight: selectionSkin skips it
+ * (its occluder test cut every box away against the opaque file surfaces) */
+${F}[data-cm-sel] [class*="_centerCol"] .mf-root ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
 
 @media (prefers-reduced-motion: reduce) {
   .mg-hl, ${S} *, ${F} * { transition: none !important; }
@@ -836,7 +839,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.1'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.2'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -1072,11 +1075,53 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
         }
         return out;
       };
+      // Text rects only cover the font's content area. An inline element that
+      // paints a box (inline code's pill: background + padding + hairline)
+      // reaches past it, so the band would leave the pill sticking out above
+      // and below. Grow each text rect to the painted border box of its inline
+      // ancestors: always vertically, and sideways only across the padding when
+      // the selected text reaches that edge of the element. Cached per draw.
+      let boxCache = new Map();
+      const paintedInline = (el, col) => {
+        if (boxCache.has(el)) return boxCache.get(el);
+        let out = [];
+        if (el && el !== col && col.contains(el)) {
+          const cs = getComputedStyle(el);
+          // DSH renders inline code as inline-flex, so every inline-level
+          // display counts, not just plain inline
+          if (/^inline/.test(cs.display)) {
+            out = paintedInline(el.parentElement, col);
+            const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+            if (pad > 0 || alphaOf(cs.backgroundColor) > 0.02 || cs.backgroundImage !== 'none') {
+              const padL = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+              const padR = parseFloat(cs.paddingRight) + parseFloat(cs.borderRightWidth);
+              out = out.concat([...el.getClientRects()].map((r) => ({ l: r.left, t: r.top, r: r.right, b: r.bottom, padL, padR })));
+            }
+          }
+        }
+        boxCache.set(el, out);
+        return out;
+      };
+      const fit = (rects, el, col) => {
+        const boxes = paintedInline(el, col);
+        if (!boxes.length) return rects;
+        return [...rects].map((r) => {
+          let { left: l, top: t, right: rr, bottom: b } = r;
+          for (const p of boxes) {
+            // the element fragment on this line holding this text rect
+            if (p.r < r.left - 0.5 || p.l > r.right + 0.5 || p.b < r.top || p.t > r.bottom) continue;
+            t = Math.min(t, p.t); b = Math.max(b, p.b);
+            if (r.left - p.l <= p.padL + 1.5) l = Math.min(l, p.l);
+            if (p.r - r.right <= p.padR + 1.5) rr = Math.max(rr, p.r);
+          }
+          return { left: l, top: t, right: rr, bottom: b, width: rr - l, height: b - t };
+        });
+      };
       const textRects = (range, col) => {
         const out = [];
         const rootNode = range.commonAncestorContainer;
         if (rootNode.nodeType === 3) {
-          if (col.contains(rootNode)) out.push(...clipped(range.getClientRects(), rootNode.parentElement, col));
+          if (col.contains(rootNode)) out.push(...clipped(fit(range.getClientRects(), rootNode.parentElement, col), rootNode.parentElement, col));
           return out;
         }
         const walk = document.createTreeWalker(rootNode, NodeFilter.SHOW_TEXT, {
@@ -1089,7 +1134,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           sub.selectNodeContents(t);
           if (t === range.startContainer) sub.setStart(t, range.startOffset);
           if (t === range.endContainer) sub.setEnd(t, range.endOffset);
-          out.push(...clipped(sub.getClientRects(), t.parentElement, col));
+          out.push(...clipped(fit(sub.getClientRects(), t.parentElement, col), t.parentElement, col));
         }
         return out;
       };
@@ -1196,6 +1241,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
       const draw = () => {
         raf = 0;
         clipCache = new Map();
+        boxCache = new Map();
         const sel = document.getSelection();
         const col = frame.querySelector('[class*="_centerCol"]');
         const act = document.activeElement;
@@ -1205,7 +1251,11 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           const ranges = [];
           for (let i = 0; i < sel.rangeCount; i++) {
             const r = sel.getRangeAt(i);
-            if (col.contains(r.commonAncestorContainer) || r.commonAncestorContainer.contains(col)) { rects.push(...textRects(r, col)); ranges.push(r); }
+            const anc = r.commonAncestorContainer;
+            const ancEl = anc.nodeType === 1 ? anc : anc.parentElement;
+            // the file view paints its own native / CodeMirror selection
+            if (ancEl && ancEl.closest('.mf-root')) continue;
+            if (col.contains(anc) || anc.contains(col)) { rects.push(...textRects(r, col)); ranges.push(r); }
           }
           const c = clipBox(col);
           boxes = merge(rects)
@@ -2322,6 +2372,8 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     const fileTabs = {
       services: null,
       bypass: new Set(), // addresses the user sent back to the sidebar on purpose
+      drafts: new Map(), // address -> { text, base, version }: edits survive switching tabs
+      dirty: new Set(), // addresses whose draft differs from what was last read or saved
       state: { files: [], active: {} }, // active: sessionId -> address
       listeners: new Set(),
       get: () => fileTabs.state,
@@ -2348,6 +2400,9 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     }
 
     function closeFileTab(sessionId, address) {
+      if (fileTabs.dirty.has(address) && !window.confirm('这个文件有未保存的修改，关闭后修改会丢失。仍要关闭吗？')) return;
+      fileTabs.drafts.delete(address);
+      fileTabs.dirty.delete(address);
       const { files, active } = fileTabs.get();
       const mine = files.filter((f) => f.sessionId === sessionId);
       const idx = mine.findIndex((f) => f.address === address);
@@ -2424,8 +2479,180 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 
     const errText = (error) => (error && (error.message || error.code)) || '读取失败';
 
+    // ---- file body: read, Markdown render, edit + save --------------------
+    // Reading pages through DSH's read-only `workspaceFiles` Remote. Editing
+    // and saving go through this plugin's own Host route (index.js): it reads
+    // the whole file with its version and writes it back compare-and-set, so a
+    // file the agent changed while you typed is refused instead of clobbered.
+    const EDIT_ROUTE = 'api/hanmo.edit';
+    const MD_EXT = new Set(['md', 'markdown', 'mdx', 'mdown', 'mkd']);
+    const isMarkdown = (path) => MD_EXT.has(extOf(path));
+    const FRONTMATTER = /^\uFEFF?---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)??(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/u;
+    function splitFrontmatter(text) {
+      const m = FRONTMATTER.exec(text);
+      return m ? { source: m[1] || '', body: text.slice(m[0].length) } : undefined;
+    }
+    const isAbsPath = (p) => p.startsWith('/') || /^[a-zA-Z]:[\\/]/.test(p);
+    // Markdown image destinations, the way DSH's own document preview resolves
+    // them: relative paths beside the document, served by the file route
+    function markdownImageUrl(docPath, dest) {
+      const cut = dest.search(/[?#]/u);
+      let path;
+      try { path = decodeURIComponent(cut === -1 ? dest : dest.slice(0, cut)); } catch { return undefined; }
+      if (!path || (!/^[a-z]:[/\\]/iu.test(path) && /^[a-z][a-z\d+.-]*:/iu.test(path))) return undefined;
+      if (!isAbsPath(path)) {
+        if (!docPath) return undefined;
+        const dir = docPath.replace(/[/\\]+$/, '');
+        path = dir.slice(0, Math.max(dir.lastIndexOf('/'), dir.lastIndexOf('\\')) + 1) + path;
+      }
+      if (/^[/\\]{2}/u.test(path) || /[\u0000-\u001f\u007f]/u.test(path)) return undefined;
+      return new URL(`api/file?path=${encodeURIComponent(path)}`, document.baseURI).href;
+    }
+    const MD_LABELS = {
+      code: { copyLabel: '复制', copiedLabel: '已复制', toolbarLabels: { codeLabel: '代码', wrapLabel: '自动换行', unwrapLabel: '取消换行' } },
+      footnotes: '脚注',
+    };
+    // GET answers the raw text (version in a header), POST answers JSON; the
+    // text never travels JSON-escaped, which matters at tens of megabytes
+    const EDIT_NOT_READY = '编辑服务未就绪：请重启 DSH 让插件的 Host 部分生效';
+    function readForEdit(file, large, signal) {
+      const params = { sessionId: file.sessionId, path: file.path };
+      if (large) params.large = '1';
+      return fetch(hostUrl(EDIT_ROUTE, params), { credentials: 'same-origin', signal }).then((res) => {
+        const type = res.headers.get('content-type') || '';
+        if (res.ok && type.startsWith('text/plain')) {
+          return res.text().then((text) => ({ ok: true, text, version: decodeURIComponent(res.headers.get('x-dsh-version') || '') }));
+        }
+        return res.json().catch(() => ({ ok: false, code: `http-${res.status}`, message: res.status === 404 ? EDIT_NOT_READY : `HTTP ${res.status}` }));
+      });
+    }
+    function writeForEdit(file, text, version) {
+      return fetch(hostUrl(EDIT_ROUTE, { sessionId: file.sessionId, path: file.path, version }), {
+        method: 'POST', credentials: 'same-origin',
+        headers: { 'content-type': 'text/plain;charset=utf-8', 'x-dsh-edit': '1' }, body: text,
+      }).then((res) => res.json().catch(() => ({ ok: false, code: `http-${res.status}`, message: res.status === 404 ? EDIT_NOT_READY : `HTTP ${res.status}` })));
+    }
+    const fmtSize = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.ceil(n / 1024)} KB`);
+    // newline count without materialising an array of lines
+    function countLines(text) {
+      let n = 1;
+      for (let i = text.indexOf('\n'); i !== -1; i = text.indexOf('\n', i + 1)) n += 1;
+      return n;
+    }
+    const setDirty = (address, on) => {
+      const had = fileTabs.dirty.has(address);
+      if (on) fileTabs.dirty.add(address); else fileTabs.dirty.delete(address);
+      if (had !== on) fileTabs.set({ ...fileTabs.get() }); // repaint the tab dot
+    };
+    const MODE_KEY = 'hanmo:md-mode';
+
+    // Read-only source view: the same CodeMirror chunk as the editor, so syntax
+    // colours and the selection look match 编辑 mode. `fallback` renders when
+    // the chunk cannot load.
+    function SourceBody({ text, path, name, fallback }) {
+      const [mod, setMod] = React.useState(null);
+      const host = React.useRef(null);
+      const cm = React.useRef(null);
+      React.useEffect(() => {
+        let dead = false;
+        loadEditorChunk().then((m) => {
+          if (dead || !host.current || cm.current) return;
+          if (!m) { setMod(false); return; }
+          cm.current = m.createEditor(host.current, { text, path, label: `源码 ${name}`, readOnly: true });
+          setMod(m);
+        });
+        return () => { dead = true; if (cm.current) { cm.current.destroy(); cm.current = null; } };
+      }, [path]);
+      React.useEffect(() => {
+        if (cm.current && cm.current.getText() !== text) cm.current.setText(text);
+      }, [text, mod]);
+      if (mod === false) return fallback;
+      return h('div', { className: 'mf-cm-box' },
+        h('div', { className: 'mf-cm', ref: host }),
+        mod ? null : h('div', { className: 'mf-cm-wait' }, '准备编辑器…'));
+    }
+
+    // 预览 mode: fenced code inside the rendered Markdown is re-coloured by the
+    // CodeMirror chunk's static highlighter, so it matches 源码 / 编辑 and the
+    // theme tokens. DSH's CodeBlock (Shiki) still renders and keeps its banner
+    // and copy button; a CodeMirror copy is placed beside its <pre> and the
+    // original is hidden with CSS. React-owned nodes are never mutated, and a
+    // MutationObserver re-applies after streaming or a Shiki repaint. Without
+    // the chunk (or for a language it has no parser for) Shiki stays visible.
+    function codeBlockSource(pre) {
+      const lines = pre.querySelectorAll('.line');
+      if (lines.length) return Array.from(lines, (l) => l.textContent).join('\n');
+      return pre.textContent.replace(/\n$/, '');
+    }
+    function paintCodeBlocks(root, hl) {
+      for (const block of root.querySelectorAll('.md-code-block')) {
+        const pre = block.querySelector('pre:not(.mf-cmk-pre)');
+        if (!pre) continue;
+        const tag = block.querySelector('[data-code-block-banner] span');
+        const lang = tag ? tag.textContent.trim() : '';
+        const code = codeBlockSource(pre);
+        let mine = block.querySelector('pre.mf-cmk-pre');
+        if (mine && mine.__src === code && mine.__lang === lang && mine.previousElementSibling === pre) continue;
+        const html = code ? hl(code, lang) : null;
+        if (html == null) {
+          if (mine) mine.remove();
+          block.removeAttribute('data-cmk');
+          continue;
+        }
+        if (!mine) mine = document.createElement('pre');
+        mine.className = `${pre.className} mf-cmk-pre`;
+        const style = pre.getAttribute('style');
+        if (style) mine.setAttribute('style', style); else mine.removeAttribute('style');
+        mine.innerHTML = `<code>${html.split('\n').map((l) => `<span class="line">${l}</span>`).join('\n')}</code>`;
+        mine.__src = code;
+        mine.__lang = lang;
+        if (mine.previousElementSibling !== pre) pre.after(mine);
+        block.setAttribute('data-cmk', '');
+      }
+    }
+    function MdPreview({ children }) {
+      const ref = React.useRef(null);
+      React.useEffect(() => {
+        let dead = false;
+        let mo = null;
+        let raf = 0;
+        loadEditorChunk().then((m) => {
+          const root = ref.current;
+          if (dead || !root || !m || !m.highlightCodeBlock) return;
+          const run = () => {
+            raf = 0;
+            if (dead) return;
+            try { paintCodeBlocks(root, m.highlightCodeBlock); } catch { /* Shiki stays */ }
+          };
+          run();
+          mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(run); });
+          mo.observe(root, { childList: true, subtree: true, characterData: true });
+        });
+        return () => { dead = true; if (mo) mo.disconnect(); if (raf) cancelAnimationFrame(raf); };
+      }, []);
+      return h('div', { className: 'mf-md', ref }, children);
+    }
+
     function TextBody({ file }) {
-      const [st, setSt] = React.useState({ text: '', lines: 0, eof: false, loading: true, error: null });
+      const [st, setSt] = React.useState({ text: '', lines: 0, eof: false, loading: true, error: null, absolutePath: undefined });
+      const [reloadKey, setReloadKey] = React.useState(0);
+      const md = isMarkdown(file.path);
+      // view mode: 'preview' (rendered Markdown) | 'source' | 'edit'
+      const [mode, setModeState] = React.useState(() => {
+        if (fileTabs.drafts.has(file.address)) return 'edit';
+        if (!md) return 'source';
+        try { return localStorage.getItem(MODE_KEY) === 'source' ? 'source' : 'preview'; } catch { return 'preview'; }
+      });
+      const viewMode = React.useRef(mode === 'edit' ? (md ? 'preview' : 'source') : mode);
+      const setMode = (m) => {
+        if (m !== 'edit') {
+          viewMode.current = m;
+          if (md) { try { localStorage.setItem(MODE_KEY, m); } catch { /* private mode */ } }
+          // leaving an untouched editor through the mode strip drops its draft
+          if (!fileTabs.dirty.has(file.address)) fileTabs.drafts.delete(file.address);
+        }
+        setModeState(m);
+      };
       const ctl = React.useRef(null);
       const load = React.useCallback((offset, prev) => {
         const remote = fileTabs.services && fileTabs.services.files;
@@ -2439,27 +2666,54 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           if (!res.ok) { setSt((s) => ({ ...s, loading: false, error: errText(res.error) })); return; }
           const v = res.value;
           const text = prev.lines > 0 && v.lines > 0 ? `${prev.text}\n${v.text}` : (prev.lines > 0 ? prev.text : v.text);
-          setSt({ text, lines: prev.lines + v.lines, eof: v.eof, loading: false, error: null });
+          setSt({ text, lines: prev.lines + v.lines, eof: v.eof, loading: false, error: null, absolutePath: v.absolutePath });
         }, (e) => { if (!ac.signal.aborted) setSt((s) => ({ ...s, loading: false, error: errText(e) })); });
       }, [file.sessionId, file.path]);
       React.useEffect(() => {
         load(1, { text: '', lines: 0 });
         return () => { if (ctl.current) ctl.current.abort(); };
-      }, [load]);
+      }, [load, reloadKey]);
+
+      // Markdown preview, the same primitive DSH's sidebar document preview uses
+      const split = React.useMemo(() => (md ? splitFrontmatter(st.text) : undefined), [md, st.text]);
+      const pathImages = React.useMemo(() => ({ resolve: (dest) => markdownImageUrl(st.absolutePath, dest) }), [st.absolutePath]);
+      const canRender = md && primitives && primitives.MarkdownText;
+
+      const toolbar = h('div', { className: 'mf-mode', role: 'toolbar', 'aria-label': '查看方式' },
+        canRender ? h('button', { type: 'button', className: 'mf-seg', 'aria-pressed': String(mode === 'preview'), onClick: () => setMode('preview'), disabled: mode === 'edit' && fileTabs.dirty.has(file.address) }, '预览') : null,
+        canRender ? h('button', { type: 'button', className: 'mf-seg', 'aria-pressed': String(mode === 'source'), onClick: () => setMode('source'), disabled: mode === 'edit' && fileTabs.dirty.has(file.address) }, '源码') : null,
+        h('button', { type: 'button', className: 'mf-seg mf-seg-edit', 'aria-pressed': String(mode === 'edit'), onClick: () => setMode('edit'), disabled: mode === 'edit' }, '编辑'));
+
+      if (mode === 'edit') {
+        return h(EditBody, {
+          file, toolbar,
+          onDone: (saved) => { setMode(viewMode.current); if (saved) setReloadKey((k) => k + 1); },
+        });
+      }
       if (st.error && st.lines === 0) {
         return h('div', { className: 'mf-empty' },
           h('p', null, `无法在主面板预览：${st.error}`),
           h('button', { type: 'button', className: 'mf-btn', onClick: () => sendToSidebar(file.address) }, '在侧边栏中打开'));
       }
-      // syntax highlighting: DSH's shared CodeBlock (Shiki, css-variables theme),
-      // the same component the built-in sidebar code preview renders
-      const lang = primitives && primitives.languageForPath ? primitives.languageForPath(file.path) : undefined;
       let body;
-      if (primitives && primitives.CodeBlock) {
-        body = h('div', { className: 'mf-hl' }, h(primitives.CodeBlock, {
+      if (canRender && mode === 'preview') {
+        body = h(MdPreview, null,
+          split ? h('pre', { className: 'mf-front' }, split.source) : null,
+          h(primitives.MarkdownText, { text: split ? split.body : st.text, streaming: !st.eof, labels: MD_LABELS, pathImages }));
+      } else if (primitives && primitives.CodeBlock) {
+        // syntax highlighting: DSH's shared CodeBlock (Shiki, css-variables
+        // theme), the same component the built-in sidebar code preview renders
+        // fallback when the CodeMirror chunk cannot load: Shiki's CodeBlock
+        const lang = md ? 'markdown' : (primitives.languageForPath ? primitives.languageForPath(file.path) : undefined);
+        const fallback = h('div', { className: 'mf-hl' }, h(primitives.CodeBlock, {
           code: st.text, lang, streaming: !st.eof, lineNumbers: true, showHeader: false,
           copyLabel: '复制', copiedLabel: '已复制',
         }));
+        // 源码 mode uses the read-only CodeMirror view: Shiki only paints once
+        // its grammar chunk has loaded and the block is in view, which left
+        // this panel unstyled; CodeMirror highlights synchronously and draws
+        // its own selection layer
+        body = h(SourceBody, { text: st.text, path: file.path, name: file.name, fallback });
       } else {
         const gutter = [];
         for (let i = 1; i <= st.lines; i += 1) gutter.push(i);
@@ -2467,15 +2721,224 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           h('pre', { className: 'mf-gutter', 'aria-hidden': 'true' }, gutter.join('\n')),
           h('pre', { className: 'mf-text' }, st.text));
       }
-      return h('div', { className: 'mf-scroll' },
-        body,
-        h('div', { className: 'mf-foot' },
-          st.loading ? '读取中…'
-            : st.error ? h(React.Fragment, null, `读取失败：${st.error} `,
-              h('button', { type: 'button', className: 'mf-btn', onClick: () => load(st.lines + 1, st) }, '重试'))
-            : st.eof ? `共 ${st.lines} 行`
-            : h(React.Fragment, null, `已显示 ${st.lines} 行 `,
-              h('button', { type: 'button', className: 'mf-btn', onClick: () => load(st.lines + 1, st) }, '加载更多'))));
+      return h(React.Fragment, null,
+        h('div', { className: 'mf-sub' }, toolbar),
+        h('div', { className: 'mf-scroll' },
+          body,
+          h('div', { className: 'mf-foot' },
+            st.loading ? '读取中…'
+              : st.error ? h(React.Fragment, null, `读取失败：${st.error} `,
+                h('button', { type: 'button', className: 'mf-btn', onClick: () => load(st.lines + 1, st) }, '重试'))
+              : st.eof ? `共 ${st.lines} 行`
+              : h(React.Fragment, null, `已显示 ${st.lines} 行 `,
+                h('button', { type: 'button', className: 'mf-btn', onClick: () => load(st.lines + 1, st) }, '加载更多')))));
+    }
+
+    // Editor over the whole file. The real editor is CodeMirror 6, loaded on
+    // first use as a package-local chunk (client.editor.js): it renders only
+    // the visible lines, so multi-megabyte files scroll and type smoothly.
+    // Until that chunk arrives — or if it cannot load — a plain textarea over
+    // the whole text stands in, so editing never breaks.
+    // Behaviour is the same in both: "dirty" flips on the first keystroke (one
+    // render) while the exact compare and the line count wait for typing to
+    // pause; a draft is stashed in fileTabs.drafts when the editor unmounts
+    // (tab switch), not on every keystroke; Ctrl/Cmd+S saves; Esc on a clean
+    // draft exits; Tab indents (a tab for go/mk/Makefile, two spaces else).
+    let editorChunk = null;
+    const loadEditorChunk = () => {
+      if (!editorChunk) {
+        editorChunk = require.async('./client.editor.js').then((m) => (m && m.createEditor ? m : null), () => null);
+      }
+      return editorChunk;
+    };
+
+    function EditBody({ file, toolbar, onDone }) {
+      const existing = fileTabs.drafts.get(file.address);
+      const [st, setSt] = React.useState(() => (existing
+        ? { phase: 'ready', error: null, conflict: false, size: 0 }
+        : { phase: 'loading', error: null, conflict: false, size: 0 }));
+      const [dirty, setDirtyState] = React.useState(() => !!existing && existing.text !== existing.base);
+      const [lines, setLines] = React.useState(() => (existing ? countLines(existing.text) : 0));
+      const [mod, setMod] = React.useState(null); // the editor chunk, once loaded
+      const area = React.useRef(null); // textarea fallback
+      const host = React.useRef(null); // CodeMirror mount node
+      const cm = React.useRef(null); // CodeMirror handle
+      const useTabs = /\.(go|mk)$|(^|[/\\])makefile$/i.test(file.path);
+      const base = React.useRef(existing ? { text: existing.base, version: existing.version } : { text: '', version: undefined });
+      const initial = React.useRef(existing ? existing.text : '');
+      const dirtyRef = React.useRef(dirty);
+      const busy = React.useRef(false);
+      const idle = React.useRef(0);
+      const loadCtl = React.useRef(null);
+      const markDirty = (on) => {
+        if (dirtyRef.current === on) return;
+        dirtyRef.current = on;
+        setDirtyState(on);
+        setDirty(file.address, on);
+      };
+      const valueNow = () => (cm.current ? cm.current.getText() : area.current ? area.current.value : initial.current);
+      const lengthNow = () => (cm.current ? cm.current.length() : area.current ? area.current.value.length : initial.current.length);
+      // the exact checks, once typing pauses
+      const settle = () => {
+        clearTimeout(idle.current);
+        idle.current = setTimeout(() => {
+          // a different length is already proof of a change, so the full text
+          // is only materialised when the lengths match
+          markDirty(lengthNow() !== base.current.text.length || valueNow() !== base.current.text);
+          setLines(cm.current ? cm.current.lines() : countLines(valueNow()));
+        }, 300);
+      };
+      const fetchFile = React.useCallback((keepText, large) => {
+        if (loadCtl.current) loadCtl.current.abort();
+        const ac = new AbortController();
+        loadCtl.current = ac;
+        setSt((s) => ({ ...s, phase: s.phase === 'ready' ? 'ready' : 'loading', error: null }));
+        readForEdit(file, large, ac.signal).then((res) => {
+          if (ac.signal.aborted) return;
+          if (!res.ok) {
+            if (res.code === 'large') { setSt((s) => ({ ...s, phase: 'confirm-large', size: res.size, error: null })); return; }
+            setSt((s) => ({ ...s, phase: s.phase === 'ready' ? 'ready' : 'failed', error: res.message || res.code }));
+            return;
+          }
+          base.current = { text: res.text, version: res.version };
+          if (!keepText) {
+            initial.current = res.text;
+            if (cm.current) cm.current.setText(res.text);
+            else if (area.current) area.current.value = res.text;
+          }
+          markDirty(keepText ? (lengthNow() !== res.text.length || valueNow() !== res.text) : false);
+          setLines(cm.current ? cm.current.lines() : countLines(valueNow()));
+          setSt({ phase: 'ready', error: null, conflict: false, size: 0 });
+        }, (e) => { if (!ac.signal.aborted) setSt((s) => ({ ...s, phase: s.phase === 'ready' ? 'ready' : 'failed', error: errText(e) })); });
+      }, [file.address, file.sessionId, file.path]);
+      React.useEffect(() => {
+        if (!existing) fetchFile(false, false);
+        return () => {
+          clearTimeout(idle.current);
+          if (loadCtl.current) loadCtl.current.abort();
+          // stash a dirty draft for a tab that is still open
+          const open = fileTabs.get().files.some((f) => f.address === file.address);
+          if (open && dirtyRef.current) {
+            fileTabs.drafts.set(file.address, { text: valueNow(), base: base.current.text, version: base.current.version });
+          } else {
+            fileTabs.drafts.delete(file.address);
+          }
+        };
+      }, [fetchFile]);
+      React.useEffect(() => {
+        if (st.phase !== 'ready' || cm.current || !host.current) return undefined;
+        let dead = false;
+        loadEditorChunk().then((m) => {
+          if (dead || !host.current || cm.current) return;
+          if (!m) { setMod(false); return; } // fall back to the textarea
+          // the editor lives across renders, so it calls the latest handlers
+          // through a ref instead of the ones captured at mount
+          cm.current = m.createEditor(host.current, {
+            text: initial.current,
+            path: file.path,
+            label: `编辑 ${file.name}`,
+            useTabs,
+            onChange: () => handlers.current.onInput(),
+            onSave: () => handlers.current.save(),
+            onEscape: () => handlers.current.escape(),
+          });
+          cm.current.focus();
+          setMod(m);
+        });
+        return () => { dead = true; };
+      }, [st.phase, fetchFile]);
+      // the CodeMirror view owns its DOM, so it is torn down here
+      React.useEffect(() => () => {
+        if (cm.current) { cm.current.destroy(); cm.current = null; }
+      }, []);
+      React.useEffect(() => {
+        if (st.phase === 'ready') {
+          if (cm.current) cm.current.focus();
+          else if (area.current && document.activeElement !== area.current) area.current.focus({ preventScroll: true });
+        }
+      }, [st.phase]);
+      React.useEffect(() => {
+        if (cm.current) cm.current.setReadOnly(st.phase === 'saving');
+      }, [st.phase]);
+      const leave = (saved) => {
+        markDirty(false);
+        fileTabs.drafts.delete(file.address);
+        onDone(saved);
+      };
+      const cancel = () => {
+        if (dirtyRef.current && !window.confirm('放弃未保存的修改？')) return;
+        leave(false);
+      };
+      const save = () => {
+        if (busy.current || st.phase !== 'ready') return;
+        const text = valueNow();
+        if (text.length === base.current.text.length && text === base.current.text) { leave(false); return; }
+        busy.current = true;
+        setSt((s) => ({ ...s, phase: 'saving', error: null }));
+        writeForEdit(file, text, base.current.version).then((res) => {
+          busy.current = false;
+          if (res.ok) { leave(true); return; }
+          setSt((s) => ({ ...s, phase: 'ready', error: res.message || res.code, conflict: res.code === 'stale' }));
+        }, (e) => { busy.current = false; setSt((s) => ({ ...s, phase: 'ready', error: errText(e) })); });
+      };
+      const onInput = () => { markDirty(true); settle(); };
+      const handlers = React.useRef(null);
+      handlers.current = {
+        onInput,
+        save,
+        escape: () => (!dirtyRef.current ? (leave(false), true) : false),
+      };
+      const onKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 's' || e.key === 'S')) { e.preventDefault(); save(); return; }
+        if (e.key === 'Escape' && !dirtyRef.current) { e.preventDefault(); leave(false); return; }
+        // Tab indents instead of leaving the editor; Shift+Tab is left to move focus
+        if (e.key === 'Tab' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          e.preventDefault();
+          const indent = useTabs ? '\t' : '  ';
+          const el = e.currentTarget;
+          let done = false;
+          try { done = document.execCommand('insertText', false, indent); } catch { /* unsupported */ }
+          if (!done) { el.setRangeText(indent, el.selectionStart, el.selectionEnd, 'end'); onInput(); }
+        }
+      };
+      const status = st.phase === 'saving' ? '保存中…' : dirty ? '未保存' : '无修改';
+      const ready = st.phase === 'ready' || st.phase === 'saving';
+      return h(React.Fragment, null,
+        h('div', { className: 'mf-sub mf-sub-edit' },
+          toolbar,
+          h('span', { className: `mf-state${dirty ? ' mf-state-dirty' : ''}`, 'aria-live': 'polite' }, ready ? status : st.phase === 'loading' ? '读取中…' : ''),
+          h('span', { className: 'mf-sub-gap' }),
+          h('button', { type: 'button', className: 'mf-btn', onClick: cancel, disabled: st.phase === 'saving' }, dirty ? '放弃修改' : '退出编辑'),
+          h('button', { type: 'button', className: 'mf-btn mf-btn-primary', onClick: save, disabled: st.phase !== 'ready' || !dirty, title: '保存（Ctrl+S）' }, '保存')),
+        st.error && ready ? h('div', { className: `mf-alert${st.conflict ? ' mf-alert-warn' : ''}`, role: 'alert' },
+          h('span', null, st.conflict ? '文件在你编辑期间被修改过（可能是智能体刚改了它），为避免覆盖，这次没有保存。' : `操作失败：${st.error}`),
+          st.conflict ? h('button', { type: 'button', className: 'mf-btn', onClick: () => fetchFile(true, true), title: '保留你的修改，以磁盘上的新版本为基准再保存' }, '保留我的修改并以最新版本为准') : null,
+          st.conflict ? h('button', { type: 'button', className: 'mf-btn', onClick: () => { if (window.confirm('丢弃你的修改，载入磁盘上的最新内容？')) fetchFile(false, true); } }, '载入最新内容') : null) : null,
+        st.phase === 'loading' ? h('div', { className: 'mf-empty' }, h('p', null, '读取中…'))
+          : st.phase === 'confirm-large' ? h('div', { className: 'mf-empty' },
+            h('p', null, `这个文件有 ${fmtSize(st.size)}，在面板里编辑可能会卡顿。`),
+            h('div', { className: 'mf-row' },
+              h('button', { type: 'button', className: 'mf-btn', onClick: () => onDone(false) }, '返回预览'),
+              h('button', { type: 'button', className: 'mf-btn mf-btn-primary', onClick: () => fetchFile(false, true) }, '仍然编辑')))
+          : st.phase === 'failed' ? h('div', { className: 'mf-empty' },
+            h('p', null, `无法编辑：${st.error}`),
+            h('button', { type: 'button', className: 'mf-btn', onClick: () => onDone(false) }, '返回预览'))
+          : h('div', { className: 'mf-edit' },
+            // Two shapes only: the textarea fallback, or the CodeMirror host.
+            // The host node is created once and CodeMirror owns its children,
+            // so React never puts children inside it; the loading hint is a
+            // sibling overlay.
+            mod === false
+              ? h('textarea', {
+                ref: area, className: 'mf-area', defaultValue: initial.current, spellCheck: false, wrap: 'off',
+                autoCapitalize: 'off', autoComplete: 'off', autoCorrect: 'off',
+                'aria-label': `编辑 ${file.name}`, readOnly: st.phase === 'saving',
+                onInput, onKeyDown,
+              })
+              : h('div', { className: 'mf-cm-box' },
+                h('div', { className: 'mf-cm', ref: host }),
+                mod ? null : h('div', { className: 'mf-cm-wait' }, '准备编辑器…')),
+            h('div', { className: 'mf-foot' }, `${lines} 行 · Ctrl+S 保存${dirty ? '' : ' · Esc 退出'}`)));
     }
 
     function ImageBody({ file }) {
@@ -2866,6 +3329,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
               onMouseDown: (e) => { if (e.button === 1) { e.preventDefault(); closeFileTab(f.sessionId, f.address); } },
             },
               h('button', { type: 'button', role: 'tab', 'aria-selected': String(f === current), className: 'mf-tab-name', onClick: () => select(f) }, f.name),
+              fileTabs.dirty.has(f.address) ? h('span', { className: 'mf-dot', title: '有未保存的修改', 'aria-label': '未保存' }) : null,
               h('button', { type: 'button', className: 'mf-x', 'aria-label': `关闭 ${f.name}`, onClick: () => closeFileTab(f.sessionId, f.address) }, '×')))),
           h('span', { className: 'mf-path', title: current.path }, current.path),
           current.kind === 'review' ? null
@@ -2913,6 +3377,55 @@ body:not([data-hanmo-native]) :is([data-composer-stat] .bOPqQW_pill,[data-compos
   background:var(--mf-stat-bg);box-shadow:0 0 0 3px var(--mf-stat-bg);border-radius:6px;
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mf-hl{padding:6px 8px 0}
+/* view-mode strip under the tab bar: a quiet segmented control (预览 / 源码 /
+   编辑); in edit mode it also carries the save state and the actions */
+.mf-sub{display:flex;align-items:center;gap:10px;padding:6px 12px;min-height:40px;box-sizing:border-box;flex:none;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.15))}
+.mf-mode{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.08));box-shadow:inset 0 0 0 .5px var(--dsw-alias-border-l1,rgba(127,127,127,.2))}
+.mf-seg{border:0;background:none;color:var(--dsw-alias-label-secondary);font:500 12px/1 var(--dsw-font-family);padding:6px 11px;border-radius:6px;cursor:pointer;transition:background-color .15s ease,color .15s ease,box-shadow .15s ease}
+.mf-seg:hover:not(:disabled){color:var(--dsw-alias-label-primary)}
+.mf-seg[aria-pressed=true]{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);box-shadow:0 1px 2px rgba(0,0,0,.08),0 0 0 .5px var(--dsw-alias-border-l2,rgba(127,127,127,.3))}
+.mf-seg:disabled:not([aria-pressed=true]){opacity:.45;cursor:default}
+.mf-seg:disabled[aria-pressed=true]{cursor:default}
+.mf-seg:focus-visible,.mf-btn:focus-visible{outline:2px solid var(--cm-accent,var(--dsw-alias-interactive-primary,#3b82f6));outline-offset:1px}
+.mf-sub-gap{flex:1}
+.mf-state{font-size:12px;color:var(--dsw-alias-label-tertiary);display:inline-flex;align-items:center;gap:6px}
+.mf-state-dirty{color:var(--dsw-alias-label-secondary)}
+.mf-state-dirty::before,.mf-dot{content:"";width:7px;height:7px;border-radius:50%;background:var(--cm-accent,#d97706);flex:none}
+.mf-dot{display:inline-block;margin:0 2px 0 -1px}
+.mf-btn:disabled{opacity:.45;cursor:default}
+.mf-btn-primary{color:var(--dsw-alias-bg-base);background:var(--dsw-alias-label-primary);border-color:transparent;font-weight:500}
+.mf-btn-primary:hover:not(:disabled){color:var(--dsw-alias-bg-base);background:var(--dsw-alias-label-primary);opacity:.86}
+.mf-alert{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin:10px 12px 0;padding:9px 12px;border-radius:8px;font-size:12.5px;line-height:1.5;color:var(--dsw-alias-label-primary);
+  background:color-mix(in srgb,#dc2626 9%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,#dc2626 35%,transparent)}
+.mf-alert-warn{background:color-mix(in srgb,#d97706 10%,transparent);box-shadow:inset 0 0 0 .5px color-mix(in srgb,#d97706 40%,transparent)}
+.mf-alert>span{flex:1 1 260px}
+/* the editor: one plain textarea in the code font, scrolling on its own;
+   padding-bottom keeps the last lines clear of the floating composer */
+.mf-edit{flex:1;min-height:0;display:flex;flex-direction:column;padding-bottom:var(--mf-dock,0px)}
+/* the CodeMirror host: fills the panel, scrolls itself, only the visible
+   lines live in the DOM; colours come from CSS variables so a theme switch
+   repaints it with no JS involvement */
+.mf-cm-box{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.mf-cm{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+.mf-cm>.cm-editor{flex:1;min-height:0}
+.mf-cm .cm-editor.cm-focused{outline:none}
+.mf-cm-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;
+  font-size:12.5px;color:var(--dsw-alias-label-tertiary)}
+.mf-area{flex:1;min-height:0;width:100%;box-sizing:border-box;resize:none;border:0;outline:0;margin:0;padding:14px 24px 14px 20px;
+  font:13px/1.6 var(--ds-font-family-code,ui-monospace,monospace);tab-size:4;white-space:pre;overflow:auto;
+  color:var(--dsw-alias-label-primary);background:transparent;caret-color:var(--cm-accent,currentColor)}
+.mf-area::selection{background:color-mix(in srgb,var(--cm-accent,#3b82f6) 26%,transparent)}
+.mf-edit>.mf-foot{flex:none;border-top:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.15));padding:7px 16px}
+/* rendered Markdown, the sidebar document preview's measure and frontmatter box */
+.mf-md{max-width:860px;margin:0 auto;padding:22px 28px 4px;white-space:normal;min-width:0}
+.mf-md .md-code-block[data-cmk] pre:not(.mf-cmk-pre){display:none}
+.mf-md .mf-cmk-pre code{color:var(--shiki-foreground,inherit)}
+.mf-front{margin:0 0 18px;padding:10px 12px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font:12.5px/1.55 var(--ds-font-family-code,ui-monospace,monospace);
+  color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-1,rgba(127,127,127,.06));box-shadow:inset 0 0 0 .5px var(--dsw-alias-border-l2,rgba(127,127,127,.25))}
+.mf-front:empty{display:none}
+.mf-row{display:flex;gap:8px;justify-content:center}
+.mf-area{contain:layout paint style}
+@media (prefers-reduced-motion:reduce){.mf-seg{transition:none}}
 .mf-hl>.md-code-block{margin:0;--dsl-code-block-background:transparent;--dsl-code-block-border-radius:0px}
 .mf-hl>.md-code-block pre{padding:10px 16px;word-break:normal;overflow-wrap:anywhere}
 .mf-tabs{display:flex;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none;flex:0 1 auto}
