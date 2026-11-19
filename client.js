@@ -672,6 +672,26 @@ body[data-cm-ui] ${F} [role="tablist"] [role="tab"] { font-size: calc(13px + var
 body[data-cm-ui] ${F} [class*="_crumb"] { font-size: calc(14px + var(--cm-ui-d, 0px)); }
 /* the pickers' option menus are portalled to <body> */
 body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [role="menuitemradio"], [role="option"]) { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+
+/* the goal bar and the queue / steer dock above the composer: DSH cuts their
+ * text to one line with an ellipsis. Show all of it instead, wrapping long
+ * lines. Rows grow downward; the icon, label and buttons stay on the first
+ * line (offsets centre each against the 28px buttons). The queue dock also
+ * drops its Inter-first stack, so it follows the interface font. */
+[data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) { height: auto; min-height: 36px; align-items: flex-start; }
+[data-goal-bar] > [class*="_bar"] > [class*="_goalGlyph"] { margin-top: 7px; }
+[data-goal-bar] > [class*="_bar"] > [class*="_label"] { margin-top: 2px; }
+[data-goal-bar] > [class*="_bar"] > :is([class*="_objective"], [class*="_error"]) {
+  margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; text-overflow: clip;
+}
+[data-queue-dock] [class*="_list"] { max-height: min(45vh, 480px); }
+[data-queue-dock] [class*="_row"] { align-items: flex-start; }
+[data-queue-dock] [class*="_row"] > [class*="_attachments"] { margin-top: 2px; }
+[data-queue-dock] [class*="_row"] > :is([class*="_preview"], [class*="_status"]) { margin-top: 4px; }
+[data-queue-dock] :is([class*="_preview"], [class*="_count"]) { font-family: var(--dsw-font-family); }
+[data-queue-dock] [class*="_preview"] [class*="_ellipsis"] {
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; text-overflow: clip;
+}
 `;
 
     const calm = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -863,7 +883,7 @@ body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [ro
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.5'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.6'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
