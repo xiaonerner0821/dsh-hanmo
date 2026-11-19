@@ -533,11 +533,14 @@ ${F} [class*="_centerCol"] :is(p, li, td) > code {
  * in the conversation column the native highlight is hidden and selectionSkin
  * draws rounded boxes instead; form fields keep the native highlight. */
 ${F} ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
-${F}[data-cm-sel] [class*="_centerCol"] ::selection { background: transparent; }
-${F}[data-cm-sel] [class*="_centerCol"] :is(input, textarea)::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
-/* the main-panel file view keeps the native highlight: selectionSkin skips it
- * (its occluder test cut every box away against the opaque file surfaces) */
-${F}[data-cm-sel] [class*="_centerCol"] .mf-root ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent); }
+/* keyed on <body> as well as the frame: the body mark is set by the live skin
+ * itself, so a re-rendered frame that lost its attribute never lets the native
+ * band show under the rounded boxes (that was the "double border") */
+:is(${F}[data-cm-sel], body[data-cm-sel-on]) [class*="_centerCol"] ::selection { background: transparent !important; }
+:is(${F}[data-cm-sel], body[data-cm-sel-on]) [class*="_centerCol"] :is(input, textarea)::selection,
+:is(${F}[data-cm-sel], body[data-cm-sel-on]) [class*="_centerCol"] .mf-root ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transparent) !important; }
+/* (the main-panel file view keeps the native highlight: selectionSkin skips it,
+ * since its occluder test cut every box away against the opaque file surfaces) */
 
 @media (prefers-reduced-motion: reduce) {
   .mg-hl, ${S} *, ${F} * { transition: none !important; }
@@ -648,6 +651,27 @@ body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"],
 body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"] td { font-weight: var(--cm-w-text, 400); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(strong, b) { font-weight: min(900, calc(var(--cm-w-text, 400) + 200)); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font-weight: var(--cm-w-code, 400); }
+
+/* interface chrome: sidebar, the composer's permission / model pickers and the
+ * conversation header tabs. DSH sizes these in fixed px, so each one is
+ * re-declared as its own base + one shared offset (--cm-ui-d), which keeps
+ * their relative sizes. Weight: plain labels take --cm-w-ui, labels DSH
+ * already sets at 500 keep a 100 step above it. Only active when either
+ * value differs from the default (data-cm-ui), so the default look is DSH's. */
+body[data-cm-ui] ${S} ${NEW_SESSION} { font-size: calc(14px + var(--cm-ui-d, 0px)); font-weight: min(900, calc(var(--cm-w-ui, 400) + 100)); }
+body[data-cm-ui] ${S} :is(${PANEL_ROW}, ${SESSION_ROW} [class*="_title"], ${PROJECT_ROW} [class*="_title"], ${PROJECT_ROW} [class*="_name"], [class*="_renameInput"]) { font-size: calc(14px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+body[data-cm-ui] ${S} :is([class*="_meta"], [class*="_sessionOverflowButton"], [class*="_sectionLabel"], [class*="_searchStatus"]) { font-size: calc(12px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+body[data-cm-ui] ${S} :is([class*="_searchInput"], [class*="_empty"], [class*="_archiveActivity"]) { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+body[data-cm-ui] ${S} ${SESSION_ROW} [class*="_time"] { font-size: calc(10px + var(--cm-ui-d, 0px)); }
+body[data-cm-ui] ${S} [class*="_settingsArea"] [class*="_triggerRow"] { font-size: calc(14px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+body[data-cm-ui] ${F} [data-composer-card] :is(button[class*="_trigger"], button[class*="_select"], [class*="_select"] button) {
+  font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: min(900, calc(var(--cm-w-ui, 400) + 100));
+}
+body[data-cm-ui] ${F} [class*="_tabs"] [class*="_tab"],
+body[data-cm-ui] ${F} [role="tablist"] [role="tab"] { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: min(900, calc(var(--cm-w-ui, 400) + 100)); }
+body[data-cm-ui] ${F} [class*="_crumb"] { font-size: calc(14px + var(--cm-ui-d, 0px)); }
+/* the pickers' option menus are portalled to <body> */
+body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [role="menuitemradio"], [role="option"]) { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
 `;
 
     const calm = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -839,7 +863,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.4'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.5'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -1031,11 +1055,34 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
      * one line are merged so overlaps do not darken, and the layer blends
      * (multiply on light, screen on dark) so the text under it keeps its colour.
      */
+    /* One skin per frame, shared by every caller. The sidebar foot can mount
+     * more than once (another plugin re-hosting the footer, an effect re-run
+     * on a theme / font change), and the unmount of one copy used to strip
+     * data-cm-sel from the frame while another copy's layer kept drawing: the
+     * native highlight came back under the rounded boxes as a second band. */
+    const SEL_SKINS = new Map();
+    const FRAME_USERS = new Map();
     function selectionSkin(frame) {
+      let rec = SEL_SKINS.get(frame);
+      if (!rec) { rec = { n: 0, stop: makeSelectionSkin(frame) }; SEL_SKINS.set(frame, rec); }
+      rec.n++;
+      let done = false;
+      return () => {
+        if (done) return;
+        done = true;
+        if (--rec.n > 0) return;
+        SEL_SKINS.delete(frame);
+        rec.stop();
+      };
+    }
+    function makeSelectionSkin(frame) {
+      // stale layers left by an earlier copy of the plugin (live patch reload)
+      for (const old of document.querySelectorAll('body > .cm-sel-layer')) old.remove();
       const layer = document.createElement('div');
       layer.className = 'cm-sel-layer';
       layer.setAttribute('aria-hidden', 'true');
       document.body.append(layer);
+      document.body.setAttribute('data-cm-sel-on', '');
       frame.setAttribute('data-cm-sel', '');
       const MAX_NODES = 4000;
       let raf = 0;
@@ -1240,6 +1287,11 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
       };
       const draw = () => {
         raf = 0;
+        // the native highlight stays hidden only while both marks are on the
+        // frame; anything that stripped them is undone before boxes are drawn
+        if (!frame.hasAttribute('data-cm-sel')) frame.setAttribute('data-cm-sel', '');
+        if (!document.body.hasAttribute('data-cm-sel-on')) document.body.setAttribute('data-cm-sel-on', '');
+        if (!frame.hasAttribute(FRAME_ATTR)) frame.setAttribute(FRAME_ATTR, '');
         clipCache = new Map();
         boxCache = new Map();
         const sel = document.getSelection();
@@ -1315,7 +1367,12 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
         window.removeEventListener('scroll', queue, { capture: true });
         window.removeEventListener('resize', burst);
         layer.remove();
-        frame.removeAttribute('data-cm-sel');
+        // another live copy (a patch reload keeps the old one around for a
+        // moment) still draws boxes: its native highlight must stay hidden
+        if (!document.querySelector('body > .cm-sel-layer')) {
+          frame.removeAttribute('data-cm-sel');
+          document.body.removeAttribute('data-cm-sel-on');
+        }
       };
     }
 
@@ -1331,10 +1388,17 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
         if (!root) return undefined;
         // the app frame holds the main panel too; mark it for the main-panel skin
         const frame = root.closest('[class*="_frame"]');
-        if (frame) frame.setAttribute(FRAME_ATTR, '');
+        if (frame) { frame.setAttribute(FRAME_ATTR, ''); FRAME_USERS.set(frame, (FRAME_USERS.get(frame) || 0) + 1); }
         const detach = attach(root);
         const unSel = frame ? selectionSkin(frame) : () => {};
-        return () => { unSel(); detach(); if (frame) frame.removeAttribute(FRAME_ATTR); };
+        return () => {
+          unSel(); detach();
+          if (!frame) return;
+          const n = (FRAME_USERS.get(frame) || 1) - 1;
+          if (n > 0) { FRAME_USERS.set(frame, n); return; }
+          FRAME_USERS.delete(frame);
+          frame.removeAttribute(FRAME_ATTR);
+        };
       }, [off]);
       return h(React.Fragment, null,
         h('style', { 'data-plugin': '@xiaonerner0821/dsh-hanmo' }, CSS),
@@ -1412,10 +1476,14 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
       { id: 'teal', label: '深海青', hint: '', l: '#0a5361', d: '#9fe1eb' },
     ];
     const LOOK_KEY = 'hanmo:look';
-    const LOOK_DEFAULT = { ink: 'slate', sbAlpha: 100, mainAlpha: 100, wText: 400, wCode: 400 };
+    const LOOK_DEFAULT = { ink: 'slate', sbAlpha: 100, mainAlpha: 100, wText: 400, wCode: 400, wUi: 400, uiSize: 0 };
+    // interface (chrome) size offset in px against DSH's own sizes
+    const UI_SIZE = [-2, 4];
+    const uiSize = (v) => Math.min(UI_SIZE[1], Math.max(UI_SIZE[0], Math.round(Number(v) || 0)));
     // main-panel font weights offered in the popover (CSS numeric weights)
     const WEIGHTS = [[300, '细'], [400, '常规'], [500, '中等'], [600, '粗']];
     const weight = (v) => (WEIGHTS.some(([w]) => w === Number(v)) ? Number(v) : 400);
+    const LOOK_VARS = ['--cm-ink-l', '--cm-ink-d', '--cm-sb-alpha', '--cm-main-alpha', '--cm-sb-blur', '--cm-main-blur', '--cm-w-text', '--cm-w-code', '--cm-w-ui', '--cm-ui-d'];
     /** Persisted look settings (ink, panel opacity, font weight) applied as <body> vars. */
     function lookStore() {
       const listeners = new Set();
@@ -1432,7 +1500,8 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           document.body.removeAttribute('data-cm-ink');
           document.body.removeAttribute('data-cm-glass');
           document.body.removeAttribute('data-cm-weight');
-          for (const k of ['--cm-ink-l', '--cm-ink-d', '--cm-sb-alpha', '--cm-main-alpha', '--cm-sb-blur', '--cm-main-blur', '--cm-w-text', '--cm-w-code']) b.removeProperty(k);
+          document.body.removeAttribute('data-cm-ui');
+          for (const k of LOOK_VARS) b.removeProperty(k);
           return;
         }
         const ink = INKS.find((i) => i.id === state.ink) || INKS[0];
@@ -1467,6 +1536,16 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           b.removeProperty('--cm-w-text');
           b.removeProperty('--cm-w-code');
         }
+        const wu = weight(state.wUi), us = uiSize(state.uiSize);
+        if (wu !== 400 || us !== 0) {
+          document.body.setAttribute('data-cm-ui', '');
+          b.setProperty('--cm-w-ui', String(wu));
+          b.setProperty('--cm-ui-d', `${us}px`);
+        } else {
+          document.body.removeAttribute('data-cm-ui');
+          b.removeProperty('--cm-w-ui');
+          b.removeProperty('--cm-ui-d');
+        }
       };
       return {
         get: () => state,
@@ -1477,6 +1556,8 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           if ('mainAlpha' in patch) state.mainAlpha = pct(state.mainAlpha);
           if ('wText' in patch) state.wText = weight(state.wText);
           if ('wCode' in patch) state.wCode = weight(state.wCode);
+          if ('wUi' in patch) state.wUi = weight(state.wUi);
+          if ('uiSize' in patch) state.uiSize = uiSize(state.uiSize);
           localStorage.setItem(LOOK_KEY, JSON.stringify(state));
           apply();
           for (const fn of listeners) fn();
@@ -1487,7 +1568,8 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
           document.body.removeAttribute('data-cm-ink');
           document.body.removeAttribute('data-cm-glass');
           document.body.removeAttribute('data-cm-weight');
-          for (const k of ['--cm-ink-l', '--cm-ink-d', '--cm-sb-alpha', '--cm-main-alpha', '--cm-sb-blur', '--cm-main-blur', '--cm-w-text', '--cm-w-code']) document.body.style.removeProperty(k);
+          document.body.removeAttribute('data-cm-ui');
+          for (const k of LOOK_VARS) document.body.style.removeProperty(k);
         },
       };
     }
@@ -2304,6 +2386,16 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           h('div', { key: 'sz' }, sizeRow('text', '正文'), sizeRow('code', '代码')),
           h('p', { key: 's4', className: 'cm-ap-sec' }, '主面板字重'),
           h('div', { key: 'wt' }, weightRow('wText', '正文'), weightRow('wCode', '代码')),
+          // the interface font family is the 界面字体 above (DSH's text role
+          // already reaches the whole app); size and weight are separate
+          h('p', { key: 's4u', className: 'cm-ap-sec', title: '左侧侧边栏、输入框里的权限与模型选项、顶部「对话」「轨迹」标签等' }, '界面文字（侧边栏、标签页、输入框选项）'),
+          h('div', { key: 'ui' },
+            h('div', { className: 'cm-ap-size' },
+              h('span', null, '字号'),
+              h('button', { type: 'button', 'aria-label': '界面字号减小', disabled: lk.uiSize <= UI_SIZE[0], onClick: () => look.set({ uiSize: lk.uiSize - 1 }) }, '−'),
+              h('output', { 'aria-live': 'polite', title: '相对 DSH 默认字号' }, lk.uiSize > 0 ? `+${lk.uiSize}px` : lk.uiSize < 0 ? `${lk.uiSize}px` : '默认'),
+              h('button', { type: 'button', 'aria-label': '界面字号增大', disabled: lk.uiSize >= UI_SIZE[1], onClick: () => look.set({ uiSize: lk.uiSize + 1 }) }, '+')),
+            weightRow('wUi', '字重')),
           h('p', { key: 's5', className: 'cm-ap-sec' }, '主面板文字颜色'),
           inkList,
           h('p', { key: 's6', className: 'cm-ap-sec' }, '面板不透明度'),
