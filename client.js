@@ -839,7 +839,7 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.2'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.3'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -2341,6 +2341,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     const FILE_VIEW_ID = 'hanmo-file';
     const FILE_VIEW_LABEL = '文件预览';
     const CHAT_TAB_LABELS = ['对话', 'Chat'];
+    const FILE_TABS_KEY = 'hanmo:file-tabs';
     const FILE_ADDRESS_PREFIX = 'dsh-resource://file/';
     const IMAGE_EXT = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'avif', 'svg']);
     const IMAGE_MIME = { svg: 'image/svg+xml', jpg: 'image/jpeg', ico: 'image/x-icon' };
@@ -2378,8 +2379,20 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       listeners: new Set(),
       get: () => fileTabs.state,
       subscribe: (fn) => { fileTabs.listeners.add(fn); return () => fileTabs.listeners.delete(fn); },
-      set(next) { fileTabs.state = next; for (const fn of fileTabs.listeners) fn(); },
+      set(next) {
+        fileTabs.state = next;
+        // DSH persists the selected view per session, so a refresh comes back
+        // to this tab: keep the open files too, or it would open empty
+        try { localStorage.setItem(FILE_TABS_KEY, JSON.stringify(next)); } catch { /* quota / private mode */ }
+        for (const fn of fileTabs.listeners) fn();
+      },
     };
+    try {
+      const saved = JSON.parse(localStorage.getItem(FILE_TABS_KEY) || 'null');
+      if (saved && Array.isArray(saved.files) && saved.active && typeof saved.active === 'object') {
+        fileTabs.state = { files: saved.files.filter((f) => f && typeof f.address === 'string' && typeof f.sessionId === 'string'), active: saved.active };
+      }
+    } catch { /* unreadable: start empty */ }
 
     function clickViewTab(labels) {
       for (let i = 0; i < 6; i += 1) {
@@ -2588,7 +2601,9 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       for (const block of root.querySelectorAll('.md-code-block')) {
         const pre = block.querySelector('pre:not(.mf-cmk-pre)');
         if (!pre) continue;
-        const tag = block.querySelector('[data-code-block-banner] span');
+        // the banner puts the language in span.language (with labels) or in
+        // div.infostring (without); CSS-module class names keep the local name
+        const tag = block.querySelector('[data-code-block-banner] [class*="language"], [data-code-block-banner] [class*="infostring"], [data-code-block-banner] span');
         const lang = tag ? tag.textContent.trim() : '';
         const code = codeBlockSource(pre);
         let mine = block.querySelector('pre.mf-cmk-pre');
@@ -2744,6 +2759,9 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     // pause; a draft is stashed in fileTabs.drafts when the editor unmounts
     // (tab switch), not on every keystroke; Ctrl/Cmd+S saves; Esc on a clean
     // draft exits; Tab indents (a tab for go/mk/Makefile, two spaces else).
+    // stamped by editor/build.mjs: a chunk rebuild must change client.js, since
+    // DSH serves the chunk under client.js's revision
+    const EDITOR_BUILD = '77e3aac6fc0d';
     let editorChunk = null;
     const loadEditorChunk = () => {
       if (!editorChunk) {
@@ -3316,9 +3334,22 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
         dockRef.ro.observe(seat);
         sync();
       }, []);
+      const backToChat = () => {
+        if (typeof props.openView === 'function') { try { props.openView('chat'); return; } catch { /* fall through */ } }
+        clickViewTab(CHAT_TAB_LABELS);
+      };
+      // nothing open (e.g. the files were closed elsewhere): don't strand the
+      // user on an empty tab, go back to the conversation
+      React.useEffect(() => {
+        if (current || (props.viewRequest && props.viewRequest.view === FILE_VIEW_ID)) return;
+        const t = setTimeout(backToChat, 0);
+        return () => clearTimeout(t);
+      }, [!!current]);
       if (!current) {
         return h('div', { className: 'mf-root' },
-          h('div', { className: 'mf-empty' }, h('p', null, '在文件树或消息里点击文件，内容会在这里打开。')));
+          h('div', { className: 'mf-empty' },
+            h('p', null, '在文件树或消息里点击文件，内容会在这里打开。'),
+            h('button', { type: 'button', className: 'mf-btn', onClick: backToChat }, '返回对话')));
       }
       const select = (f) => fileTabs.set({ ...fileTabs.get(), active: { ...fileTabs.get().active, [f.sessionId]: f.address } });
       return h('div', { className: 'mf-root', ref: dockRef },
