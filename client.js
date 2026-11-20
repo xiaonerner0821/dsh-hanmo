@@ -960,8 +960,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         ? [[0, [12, 62, 152]], [0.1, [0, 116, 198]], [0.28, [0, 150, 190]],
           [0.5, [26, 106, 214]], [0.75, [124, 72, 228]], [1, [198, 60, 176]]]
         // white-hot stretch shortened ~20% (v1.9.6): near-white by 0.08, cyan by 0.22
-        // and again ~20% (v1.1.5): near-white by 0.06, cyan by 0.18
-        : [[0, [255, 255, 255]], [0.06, [226, 250, 255]], [0.18, [110, 226, 246]],
+        : [[0, [255, 255, 255]], [0.08, [226, 250, 255]], [0.22, [110, 226, 246]],
           [0.5, [104, 156, 252]], [0.75, [168, 124, 248]], [1, [236, 124, 214]]]);
       // dark hues carry more weight on white, so the plumes go a touch softer
       const A = light ? 0.82 : 1;
@@ -996,12 +995,17 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // 6px box in both themes: the loop positions every layer by its box, so
       // the size must not depend on the theme; dark draws its old 4.5px solid
       // dot inside it and looks as before.
+      // (v1.1.5) the head is a point, not a white segment: the colour leaves
+      // white for the first hue (0.22) within ~3px, then holds it until the
+      // old curve (k ** 0.75) catches up, so the rest of the trail keeps its
+      // colours where they were. It used to fade white → cyan over ~19px.
+      const headFast = (k, curve, px) => Math.max(curve, Math.min(0.22, k / px * 0.22));
       for (let i = 1; i <= 140; i++) {
         const k = i / 140;
         // 1.5x as many dots now overlap, so each is fainter by the matching
         // amount (a' = 1 - (1 - a) ** (1 / 1.5)) to keep the line's strength
         const a = 0.95 * A * (1 - k ** 2.2);
-        out.push([6, tint(k ** 0.75), +(1 - (1 - a) ** (1 / 1.5)).toFixed(3), i, 'solid', 'trace']);
+        out.push([6, tint(headFast(k, k ** 0.75, 3 / 140)), +(1 - (1 - a) ** (1 / 1.5)).toFixed(3), i, 'solid', 'trace']);
       }
       // the streak: tapers from 6px to 2px over ~24px, fading as it cools;
       // dots 0.8px apart with solid cores so it reads as one smooth stroke.
@@ -1011,25 +1015,28 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // made the head look thicker than the rest
       for (let i = 1; i <= 30; i++) {
         const k = i / 30;
-        out.push([+(4.5 - 2.5 * k).toFixed(1), tint(k), +(((1 - k) ** 1.7 * 0.95 + 0.03) * A).toFixed(3), i * 0.8, 'solid']);
+        out.push([+(4.5 - 2.5 * k).toFixed(1), tint(headFast(k, k, 2 / 24)), +(((1 - k) ** 1.7 * 0.95 + 0.03) * A).toFixed(3), i * 0.8, 'solid']);
       }
       // the tail: behind the head the glow spreads out, growing wider and
       // fainter the further back it trails, like a comet's tail fanning away
       // from the nucleus; shows on both sides of the border
+      // (v1.1.5) the glow layers start a few px behind the head, so they
+      // start on the first hue instead of white: a white glow there widened
+      // the head point back into a white stroke
       for (let j = 0; j < 22; j++) {
         const k = j / 21, d = 4 + j * 4.2;
-        out.push([+(8 + 26 * k ** 0.8).toFixed(1), tint(k), +((0.46 * (1 - k) ** 1.35 + 0.015) * A * ramp(d, 4, 14)).toFixed(3), d]);
+        out.push([+(8 + 26 * k ** 0.8).toFixed(1), tint(Math.max(0.22, k)), +((0.46 * (1 - k) ** 1.35 + 0.015) * A * ramp(d, 4, 14)).toFixed(3), d]);
       }
       // a middle sheath, spreading less, keeps the tail's body continuous
       for (let j = 0; j < 15; j++) {
         const k = j / 14, d = 3 + j * 5;
-        out.push([+(6 + 12 * k).toFixed(1), tint(k * 0.85), +((0.5 * (1 - k) ** 1.2 + 0.02) * A * ramp(d, 3, 10)).toFixed(3), d]);
+        out.push([+(6 + 12 * k).toFixed(1), tint(Math.max(0.22, k * 0.85)), +((0.5 * (1 - k) ** 1.2 + 0.02) * A * ramp(d, 3, 10)).toFixed(3), d]);
       }
       // the soft glow round the coloured line (replaces the old whole-comet
       // drop-shadow, which also haloed the head)
       for (let i = 1; i <= 28; i++) {
         const k = i / 28, d = i * 5;
-        out.push([9, tint(k), +(0.38 * (1 - k ** 2) * A * ramp(d, 4, 12)).toFixed(3), d]);
+        out.push([9, tint(Math.max(0.22, k)), +(0.38 * (1 - k ** 2) * A * ramp(d, 4, 12)).toFixed(3), d]);
       }
       return out;
     }
@@ -1957,7 +1964,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const a = hexRgb(v.accent), b = hexRgb(v.accent2), k = hexRgb(v.kw);
       if (scheme === 'dark') {
         const w = [255, 255, 255];
-        return [[0, w], [0.06, mixRgb(w, a, 0.2)], [0.18, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
+        return [[0, w], [0.08, mixRgb(w, a, 0.2)], [0.22, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
       }
       // paper: a white head would vanish, so start from the accent's deep end
       return [[0, mixRgb(a, [0, 0, 0], 0.4)], [0.1, mixRgb(a, [0, 0, 0], 0.15)], [0.28, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
