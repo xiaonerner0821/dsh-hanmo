@@ -817,6 +817,17 @@ body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"],
 body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"] td { font-weight: var(--cm-w-text, 400); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(strong, b) { font-weight: min(900, calc(var(--cm-w-text, 400) + 200)); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font-weight: var(--cm-w-code, 400); }
+/* run-detail rows: DSH pins the verb ("运行命令", "读取", "写入") at 400 (cordis
+ * tools at 500) while the target beside it and some verbs without a weight of
+ * their own ("上下文注入") inherit the chosen one, so one list mixed two
+ * weights. The exit-code tag sets its own too. */
+body[data-cm-weight] ${F} [class*="_centerCol"] [data-tool] :is([class*="_title"], [class*="_badge"]) { font-weight: var(--cm-w-text, 400); }
+/* the +N -N after a written file used the code font, 2px smaller than the row:
+ * same font and size as the row, figures kept aligned */
+body:not([data-hanmo-native]) ${F} [class*="_centerCol"] [data-tool] [class*="_diffStat"] {
+  font-family: inherit; font-size: var(--dsh-content-font-size-secondary, 13px);
+  font-variant-numeric: tabular-nums; transform: none;
+}
 
 /* interface chrome: sidebar, the composer's permission / model pickers and the
  * conversation header tabs. DSH sizes these in fixed px, so each one is
@@ -1063,7 +1074,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.1.0'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.1.1'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
