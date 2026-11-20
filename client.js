@@ -662,7 +662,7 @@ body[data-cm-ui] ${S} ${NEW_SESSION} { font-size: calc(14px + var(--cm-ui-d, 0px
 body[data-cm-ui] ${S} :is(${PANEL_ROW}, ${SESSION_ROW} [class*="_title"], ${PROJECT_ROW} [class*="_title"], ${PROJECT_ROW} [class*="_name"], [class*="_renameInput"]) { font-size: calc(14px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
 body[data-cm-ui] ${S} :is([class*="_meta"], [class*="_sessionOverflowButton"], [class*="_sectionLabel"], [class*="_searchStatus"]) { font-size: calc(12px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
 body[data-cm-ui] ${S} :is([class*="_searchInput"], [class*="_empty"], [class*="_archiveActivity"]) { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
-body[data-cm-ui] ${S} ${SESSION_ROW} [class*="_time"] { font-size: calc(10px + var(--cm-ui-d, 0px)); }
+body[data-cm-ui] ${S} ${SESSION_ROW} [class*="_time"] { font-size: calc(10px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
 body[data-cm-ui] ${S} [class*="_settingsArea"] [class*="_triggerRow"] { font-size: calc(14px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
 body[data-cm-ui] ${F} [data-composer-card] :is(button[class*="_trigger"], button[class*="_select"], [class*="_select"] button) {
   font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: min(900, calc(var(--cm-w-ui, 400) + 100));
@@ -672,6 +672,15 @@ body[data-cm-ui] ${F} [role="tablist"] [role="tab"] { font-size: calc(13px + var
 body[data-cm-ui] ${F} [class*="_crumb"] { font-size: calc(14px + var(--cm-ui-d, 0px)); }
 /* the pickers' option menus are portalled to <body> */
 body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [role="menuitemradio"], [role="option"]) { font-size: calc(13px + var(--cm-ui-d, 0px)); font-weight: var(--cm-w-ui, 400); }
+/* the browser's own button / input style resets font-weight to normal, so
+ * every control DSH gives no weight of its own (usage and context-meter
+ * triggers, header actions, the changed-files rows...) stayed at 400 and the
+ * text inside it too. Zero specificity: any DSH class weight still wins. */
+:where(body[data-cm-ui] ${F}) :is(button, input, select, textarea) { font-weight: var(--cm-w-ui, 400); }
+/* conversation header (agent team, subagents, background jobs): the slots
+ * pass the weight down; the team counter hard-codes 400 */
+body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [class*="_headerUtilities"], [data-conversation-header-corner]),
+body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [class*="_headerUtilities"], [data-conversation-header-corner]) [class*="_count"] { font-weight: var(--cm-w-ui, 400); }
 
 /* the goal bar and the queue / steer dock above the composer: DSH cuts their
  * text to one line with an ellipsis. Show all of it instead, wrapping long
@@ -883,7 +892,7 @@ body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [ro
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.6'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.7'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -3514,10 +3523,22 @@ body:not([data-hanmo-native]) .JObwrW_trigger:not(:hover):not([aria-expanded=tru
    (ContextMeter, hashed JObwrW_); back its wrapper so the trigger's own hover
    fill still shows on top. Under the DeepSeek Harness theme only while a file
    is open, the one case the chips are needed for. */
-body:not([data-hanmo-native]) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"],.JObwrW_root),
-[data-conversation-scroll]:has(.mf-root) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"],.JObwrW_root){
+body:not([data-hanmo-native]) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"]),
+[data-conversation-scroll]:has(.mf-root) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"]){
   --mf-stat-bg:color-mix(in srgb,var(--cm-base,var(--dsw-alias-bg-base)) 92%,transparent);
   background:var(--mf-stat-bg);box-shadow:0 0 0 3px var(--mf-stat-bg);border-radius:6px;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+/* the meter's tooltip is a position:fixed child of .JObwrW_root. A
+   backdrop-filter on the root would make it the tooltip's containing block:
+   the viewport coordinates then land far outside the page, the scroll area
+   grows, the view jumps, hover is lost and the tooltip hides, in a loop (the
+   whole page flickers). So the chip and its blur live on ::before instead. */
+body:not([data-hanmo-native]) .JObwrW_root,
+[data-conversation-scroll]:has(.mf-root) .JObwrW_root{position:relative;isolation:isolate}
+body:not([data-hanmo-native]) .JObwrW_root::before,
+[data-conversation-scroll]:has(.mf-root) .JObwrW_root::before{
+  content:"";position:absolute;inset:-3px;z-index:-1;border-radius:9px;pointer-events:none;
+  background:color-mix(in srgb,var(--cm-base,var(--dsw-alias-bg-base)) 92%,transparent);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .mf-hl{padding:6px 8px 0}
 /* view-mode strip under the tab bar: a quiet segmented control (预览 / 源码 /
