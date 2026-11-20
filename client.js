@@ -1854,6 +1854,23 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         light: { bg: '#ffffff', side: '#f6f8fa', l1: '#ffffff', l2: '#f6f8fa', l3: '#eaeef2', ov: '#ffffff', code: '#f6f8fa',
           text: '#1f2328', dim: '#59636e', faint: '#6e7781', accent: '#0969da', accent2: '#8250df', ok: '#1a7f37', warn: '#9a6700', err: '#cf222e',
           kw: '#cf222e', str: '#0a3069', fn: '#8250df', num: '#0550ae', type: '#953800', com: '#6e7781', punc: '#1f2328' } },
+      // 落日: the sky as the sun goes down. The sidebar carries the whole
+      // sky from zenith (top) to horizon (bottom) as one continuous gradient,
+      // with the sun's glow sitting on its lower edge; the main panel keeps a
+      // solid reading surface under a faint cool-to-warm haze. Light = golden
+      // hour (sun still up), dark = dusk (just after it has set).
+      { id: 'sunset', label: '落日', hint: '渐变', schemes: ['light', 'dark'],
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        dark: { bg: '#17152a', side: '#141730', l1: '#211d38', l2: '#2b2644', l3: '#373051', ov: '#221e3a', code: '#13122a',
+          text: '#f1e7ea', dim: '#c6b5c6', faint: '#90809a', accent: '#ff9b66', accent2: '#b98cff', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff6b82',
+          kw: '#ff7fb2', str: '#ffc47a', fn: '#ff9b66', num: '#c6a2ff', type: '#ffd67d', com: '#7d7292', punc: '#cfc1d2',
+          sky: [['#10142c', 0], ['#1a1a3d', 22], ['#2c1f4b', 44], ['#4a2350', 62], ['#6d2a4f', 77], ['#923747', 89], ['#b04b3c', 100]],
+          sun: 'rgba(255, 168, 92, .42)', haze: ['rgba(120, 110, 230, .07)', 'rgba(255, 128, 86, .08)'] },
+        light: { bg: '#fffaf6', side: '#f4ecf1', l1: '#ffffff', l2: '#fbf1ec', l3: '#f3e4df', ov: '#ffffff', code: '#fbf3ee',
+          text: '#2b2236', dim: '#5f4f68', faint: '#95859b', accent: '#d4553a', accent2: '#7a5ad4', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
+          kw: '#c2416d', str: '#b0621a', fn: '#d4553a', num: '#7a5ad4', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
+          sky: [['#c7d7ef', 0], ['#d9d6ef', 20], ['#ead4e8', 40], ['#f6d2d2', 58], ['#fbcdb3', 74], ['#fcbf92', 88], ['#f8ab76', 100]],
+          sun: 'rgba(255, 214, 140, .75)', haze: ['rgba(120, 150, 225, .07)', 'rgba(255, 150, 95, .09)'] } },
     ];
     for (const t of THEMES) if (!t.swatch) {
       t.swatch = {};
@@ -1880,11 +1897,18 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         className: 'cm-ap-theme', title: `${t.label}（${modes}）`, onClick: onPick,
       },
       h('i', { className: 'cm-ap-sw', 'aria-hidden': 'true', style: {
-        '--sw-bg': v.bg, '--sw-side': v.side, '--sw-rail': v.accent,
+        '--sw-bg': v.bg, '--sw-side': v.sky ? skyGradient(v, '100%') : v.side, '--sw-rail': v.accent,
         '--sw-fg': v.text, '--sw-a': v.kw, '--sw-b': v.fn, '--sw-c': v.str,
       } }, h('u', null), h('b', null), h('b', null), h('b', null), h('em', null, 'Aa')),
       h('span', null, t.label),
       h('small', null, t.hint ? `${t.hint} · ${modes}` : modes));
+    }
+    /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
+     * toward transparent by `alpha` (the see-through setting), with the sun's
+     * glow on the lower edge. */
+    function skyGradient(v, alpha) {
+      const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
+      return `radial-gradient(120% 22% at 50% 102%, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
     }
     const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
     const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
@@ -2042,7 +2066,47 @@ ${B} ${S}:not([class*="_collapsed"]) ${NEW_SESSION}:hover {
 }
 ${B} ${S} ${NEW_SESSION} svg { filter: drop-shadow(0 0 4px ${m(v.accent, 60)}); }
 `;
+      if (v.sky) css += skyCss(B, v, dark, m);
       return css;
+    }
+    /** The extra layer of a sky theme. The sidebar column paints the sky
+     * itself and empties the sidebar-fill token inside it, so the nested
+     * layers that repaint that token let the gradient through (popups get
+     * the solid tone back). With the see-through setting on, the stops take
+     * its opacity and the column's frosted ::before keeps only its blur. */
+    function skyCss(B, v, dark, m) {
+      const solidPopups = ':is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover])';
+      return `
+${B} ${F} [class*="_sidebarCol"] {
+  --dsw-specific-sidebar-fill: transparent;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)')} !important;
+}
+${B} ${F} [class*="_sidebarCol"] ${solidPopups} { --dsw-specific-sidebar-fill: ${v.side}; }
+${B}[data-cm-glass] ${F} [class*="_sidebarCol"]::before { background: none !important; }
+/* tiles sit on the sky as frosted glass instead of solid blocks */
+${B} ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
+  background: ${m(v.l1, dark ? 58 : 66)};
+  -webkit-backdrop-filter: blur(8px) saturate(1.2); backdrop-filter: blur(8px) saturate(1.2);
+}
+${B} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
+/* the main panel: a solid page under a faint haze, cool at the top and warm
+ * toward the composer, like the light low in the west */
+${B} ${F} [class*="_centerCol"] { position: relative; }
+${B} ${F} [class*="_centerCol"]::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(180deg, ${v.haze[0]}, transparent 38%, transparent 62%, ${v.haze[1]});
+}
+${B} ${S}:not([class*="_collapsed"]) ${NEW_SESSION} {
+  border-color: ${m(v.accent, 50)};
+  background:
+    linear-gradient(110deg, transparent 36%, rgba(255, 255, 255, ${dark ? .2 : .45}) 50%, transparent 64%) no-repeat,
+    linear-gradient(100deg, ${m(v.accent2, dark ? 34 : 22)}, ${m(v.kw, dark ? 30 : 20)} 50%, ${m(v.accent, dark ? 40 : 28)}),
+    var(--cm-fill);
+  background-size: 260% 100%, auto, auto;
+  background-position: 106% 0, 0 0, 0 0;
+}
+${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
+`;
     }
 
     const THEME_KEY = 'hanmo:theme';
