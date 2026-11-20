@@ -981,7 +981,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // the streak, solid to ~4px with a soft rim, sits on the front, under
       // a faint halo that rounds it off
       out.push([6, STOPS[0][1].join(', '), 1, 0, 'solid', 'head']);
-      out.push([10, STOPS[0][1].join(', '), light ? 0.22 : 0.32, 0, 'solid', 'halo']);
+      out.push([8, STOPS[0][1].join(', '), light ? 0.18 : 0.26, 0, 'solid', 'halo']);
       // the glow layers below start behind the head and fade in, so the
       // head itself stays a sharp point
       const ramp = (d, from, to) => Math.max(0, Math.min(1, (d - from) / (to - from)));
@@ -1051,8 +1051,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const d = beamDots(mode, stops);
       return {
         image: d.map(([, rgb, a, , solid, kind]) => (kind === 'head'
-          // round cap: solid disc to ~4px, soft rim out to the 6px box
-          ? `radial-gradient(circle closest-side, rgba(${rgb}, ${a}) 62%, rgba(${rgb}, ${(a * 0.55).toFixed(3)}) 78%, rgba(${rgb}, 0) 100%)`
+          // round cap: solid disc to ~3.4px, soft rim out to ~5px
+          ? `radial-gradient(circle closest-side, rgba(${rgb}, ${a}) 56%, rgba(${rgb}, ${(a * 0.5).toFixed(3)}) 70%, rgba(${rgb}, 0) 84%)`
           : kind === 'halo'
           ? `radial-gradient(circle closest-side, rgba(${rgb}, ${a}), rgba(${rgb}, ${(a * 0.35).toFixed(3)}) 55%, rgba(${rgb}, 0))`
           : kind === 'trace' && mode === 'light'
