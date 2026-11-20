@@ -1081,7 +1081,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.1.2'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.1.3'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -1998,6 +1998,32 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       '--shiki-token-link': `${v.accent}`,
       };
     }
+    /** Surfaces DSH paints from its own neutral ramp, outside the tokens a theme
+     * can register: file cards (已编辑 / presented files), floating buttons,
+     * solid hovers, diff rows. In a light theme they stayed near-white on a
+     * cream or tinted page. Each is derived from the theme's page and ink
+     * (a few percent of ink over the page), so cards sit one quiet step off
+     * the page in every palette. Stylesheet only, keyed on the theme. */
+    function surfaceTokens(v, dark) {
+      const over = (p, under = v.bg) => `color-mix(in srgb, ${v.text} ${p}%, ${under})`;
+      const m = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
+      return {
+        '--dsw-alias-card-fill': over(dark ? 4 : 2.5),
+        '--dsw-alias-card-fill-hover': over(dark ? 7 : 5),
+        '--dsw-alias-card-tile-fill': dark ? m(v.text, 5) : m(v.l1, 70),
+        '--dsw-alias-button-floating-fill': dark ? v.l2 : v.l1,
+        '--dsw-alias-button-floating-hover': over(dark ? 6 : 5, dark ? v.l2 : v.l1),
+        '--dsw-alias-button-elevated-fill': dark ? v.l3 : v.l1,
+        '--dsw-alias-button-ghost-active-fill': over(dark ? 12 : 8),
+        '--dsw-alias-interactive-bg-hover-solid': over(dark ? 8 : 5),
+        '--dsw-alias-illustration-surface': over(dark ? 14 : 6),
+        '--dsw-alias-bg-mask-drop': m(v.bg, 70),
+        '--dsw-alias-scrollbar-bg-l1': m(v.text, dark ? 18 : 14),
+        '--dsw-alias-scrollbar-bg-l2': m(v.text, dark ? 26 : 14),
+        '--dsw-alias-file-diff-added-bg': `color-mix(in srgb, ${v.ok} ${dark ? 16 : 12}%, ${v.bg})`,
+        '--dsw-alias-file-diff-deleted-bg': `color-mix(in srgb, ${v.err} ${dark ? 16 : 11}%, ${v.bg})`,
+      };
+    }
     function variantCss(id, v, scheme) {
       const dark = scheme === 'dark';
       // (0,2,2)+: beats Han's `html body[data-ds-dark-theme]` palette and
@@ -2007,10 +2033,12 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const sh = dark ? '2, 4, 8' : '15, 30, 50';
       const beam = beamLayersCss(scheme, themeBeamStops(v, scheme));
       const tokens = Object.entries(variantTokens(v)).map(([k, val]) => `  ${k}: ${val};`).join('\n');
+      const surfaces = Object.entries(surfaceTokens(v, dark)).map(([k, val]) => `  ${k}: ${val};`).join('\n');
       let css = `
 ${B} {
   color-scheme: ${scheme};
 ${tokens}
+${surfaces}
 }
 ${B} ${S}, ${B} ${F} {
   --cm-fill: ${v.l1};
