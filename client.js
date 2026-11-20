@@ -975,7 +975,13 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // hot core: a crisp point, no bloom round it
       // drawn with the trace's own profile (v1.9.7), so the tip is exactly as
       // wide as the line behind it instead of a fatter 6px blob
-      out.push([6, STOPS[0][1].join(', '), 1, 0, 'solid', 'trace']);
+      // (v1.1.6) a round cap instead: with the trace profile the tip was the
+      // narrowest part of the stroke (the streak behind is wider), so the
+      // front read as a blunt or pointed stub. Now a disc a touch wider than
+      // the streak, solid to ~4px with a soft rim, sits on the front, under
+      // a faint halo that rounds it off
+      out.push([6, STOPS[0][1].join(', '), 1, 0, 'solid', 'head']);
+      out.push([10, STOPS[0][1].join(', '), light ? 0.22 : 0.32, 0, 'solid', 'halo']);
       // the glow layers below start behind the head and fade in, so the
       // head itself stays a sharp point
       const ramp = (d, from, to) => Math.max(0, Math.min(1, (d - from) / (to - from)));
@@ -1044,7 +1050,12 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamLayersCss(mode, stops) {
       const d = beamDots(mode, stops);
       return {
-        image: d.map(([, rgb, a, , solid, kind]) => (kind === 'trace' && mode === 'light'
+        image: d.map(([, rgb, a, , solid, kind]) => (kind === 'head'
+          // round cap: solid disc to ~4px, soft rim out to the 6px box
+          ? `radial-gradient(circle closest-side, rgba(${rgb}, ${a}) 62%, rgba(${rgb}, ${(a * 0.55).toFixed(3)}) 78%, rgba(${rgb}, 0) 100%)`
+          : kind === 'halo'
+          ? `radial-gradient(circle closest-side, rgba(${rgb}, ${a}), rgba(${rgb}, ${(a * 0.35).toFixed(3)}) 55%, rgba(${rgb}, 0))`
+          : kind === 'trace' && mode === 'light'
           // Gaussian falloff (exp(-8r²), r = 0..1 across the 6px box): close
           // dots sum to an even line, and it stays about as thin as the old
           // solid core
