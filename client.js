@@ -960,7 +960,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         ? [[0, [12, 62, 152]], [0.1, [0, 116, 198]], [0.28, [0, 150, 190]],
           [0.5, [26, 106, 214]], [0.75, [124, 72, 228]], [1, [198, 60, 176]]]
         // white-hot stretch shortened ~20% (v1.9.6): near-white by 0.08, cyan by 0.22
-        : [[0, [255, 255, 255]], [0.08, [226, 250, 255]], [0.22, [110, 226, 246]],
+        // and again ~20% (v1.1.5): near-white by 0.06, cyan by 0.18
+        : [[0, [255, 255, 255]], [0.06, [226, 250, 255]], [0.18, [110, 226, 246]],
           [0.5, [104, 156, 252]], [0.75, [168, 124, 248]], [1, [236, 124, 214]]]);
       // dark hues carry more weight on white, so the plumes go a touch softer
       const A = light ? 0.82 : 1;
@@ -1956,7 +1957,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const a = hexRgb(v.accent), b = hexRgb(v.accent2), k = hexRgb(v.kw);
       if (scheme === 'dark') {
         const w = [255, 255, 255];
-        return [[0, w], [0.08, mixRgb(w, a, 0.2)], [0.22, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
+        return [[0, w], [0.06, mixRgb(w, a, 0.2)], [0.18, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
       }
       // paper: a white head would vanish, so start from the accent's deep end
       return [[0, mixRgb(a, [0, 0, 0], 0.4)], [0.1, mixRgb(a, [0, 0, 0], 0.15)], [0.28, a], [0.5, mixRgb(a, b, 0.5)], [0.75, b], [1, k]];
