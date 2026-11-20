@@ -591,17 +591,33 @@ body[data-cm-glass] ${F} {
   --dsw-specific-sidebar-fill: transparent;
   background: transparent;
 }
-body[data-cm-glass] ${F} [class*="_sidebarCol"] {
-  background: color-mix(in srgb, var(--cm-sbfill) calc(var(--cm-sb-alpha, 1) * 100%), transparent) !important;
+/* The tint and blur are painted by a ::before behind each column, never on
+ * the column itself: a backdrop-filter on the column would make it the
+ * containing block of every position:fixed popup inside it (tooltips, the
+ * context meter's hint), and those would land a sidebar-width off target.
+ * z-index -1 without isolation puts the layer under the column's content;
+ * the column itself stays transparent. */
+body[data-cm-glass] ${F} :is([class*="_sidebarCol"], [class*="_centerCol"], [class*="_rightbarCol"]) {
+  position: relative;
+  background: transparent !important;
+}
+body[data-cm-glass] ${F} :is([class*="_sidebarCol"], [class*="_centerCol"], [class*="_rightbarCol"])::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit;
+}
+body[data-cm-glass] ${F} [class*="_sidebarCol"]::before {
+  background: color-mix(in srgb, var(--cm-sbfill) calc(var(--cm-sb-alpha, 1) * 100%), transparent);
   -webkit-backdrop-filter: blur(var(--cm-sb-blur, 0px)) saturate(1.2);
           backdrop-filter: blur(var(--cm-sb-blur, 0px)) saturate(1.2);
 }
-body[data-cm-glass] ${F} [class*="_centerCol"],
-body[data-cm-glass] ${F} [class*="_rightbarCol"],
-body[data-cm-glass] ${F} [class*="_bottomRow"] {
-  background: color-mix(in srgb, var(--cm-base) calc(var(--cm-main-alpha, 1) * 100%), transparent) !important;
+body[data-cm-glass] ${F} :is([class*="_centerCol"], [class*="_rightbarCol"])::before {
+  background: color-mix(in srgb, var(--cm-base) calc(var(--cm-main-alpha, 1) * 100%), transparent);
   -webkit-backdrop-filter: blur(var(--cm-main-blur, 0px)) saturate(1.15);
           backdrop-filter: blur(var(--cm-main-blur, 0px)) saturate(1.15);
+}
+/* the bottom row scrolls, so a ::before would scroll away: tint only */
+body[data-cm-glass] ${F} [class*="_bottomRow"] {
+  background: color-mix(in srgb, var(--cm-base) calc(var(--cm-main-alpha, 1) * 100%), transparent) !important;
 }
 /* floating surfaces rendered inside the frame keep solid colours */
 body[data-cm-glass] ${F} :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover]) {
@@ -892,7 +908,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.7'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.8'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
