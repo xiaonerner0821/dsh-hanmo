@@ -1008,9 +1008,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // right behind the head stays short.
       // (v1.9.7) starts at 4.5px, the trace's width, not 6px: the wider start
       // made the head look thicker than the rest
-      // (v1.1.5) 24 dots instead of 30: the bright head is ~19px, not ~24px
-      for (let i = 1; i <= 24; i++) {
-        const k = i / 24;
+      for (let i = 1; i <= 30; i++) {
+        const k = i / 30;
         out.push([+(4.5 - 2.5 * k).toFixed(1), tint(k), +(((1 - k) ** 1.7 * 0.95 + 0.03) * A).toFixed(3), i * 0.8, 'solid']);
       }
       // the tail: behind the head the glow spreads out, growing wider and
