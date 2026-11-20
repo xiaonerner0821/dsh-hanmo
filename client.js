@@ -828,6 +828,13 @@ body:not([data-hanmo-native]) ${F} [class*="_centerCol"] [data-tool] [class*="_d
   font-family: inherit; font-size: var(--dsh-content-font-size-secondary, 13px);
   font-variant-numeric: tabular-nums; transform: none;
 }
+/* the 已编辑 N 个文件 card: its rows and the header totals were set in the code
+ * font at 10-11px under a 12px path; one font and size across the card */
+body:not([data-hanmo-native]) [data-changed-files] :is([class*="_row"], [class*="_statCounts"]) {
+  font-family: inherit; font-variant-numeric: tabular-nums;
+}
+body:not([data-hanmo-native]) [data-changed-files] [class*="_row"] [class*="_counts"] { font-size: 12px; }
+body:not([data-hanmo-native]) [data-changed-files] [class*="_statCounts"] { font-size: 11px; }
 
 /* interface chrome: sidebar, the composer's permission / model pickers and the
  * conversation header tabs. DSH sizes these in fixed px, so each one is
@@ -1074,7 +1081,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.1.1'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.1.2'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
