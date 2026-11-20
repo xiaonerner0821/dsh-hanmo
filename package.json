@@ -1,6 +1,6 @@
 {
   "name": "@xiaonerner0821/dsh-hanmo",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Hanmo (翰墨): an appearance plugin for the DeepSeek Harness Web UI — glowing outlined sidebar tiles, a comet-trace New Session button, six VS Code colour themes plus a sunset-sky theme, registered with DSH's theme service, font and text-colour controls, and a highlighted main-panel file preview.",
   "type": "module",
   "license": "MIT",
