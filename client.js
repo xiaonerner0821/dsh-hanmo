@@ -542,6 +542,66 @@ ${F} ::selection { background: color-mix(in srgb, var(--cm-accent) 28%, transpar
 /* (the main-panel file view keeps the native highlight: selectionSkin skips it,
  * since its occluder test cut every box away against the opaque file surfaces) */
 
+/* Mermaid diagrams drawn by the GenUI plugin (@changfenhuang/dsh-genui). Pure
+ * CSS keyed on the stable data-genui-mermaid hook: without that plugin nothing
+ * here matches. Mermaid writes its own id-scoped <style> into the svg, so the
+ * overrides need !important; any shape or edge carrying an inline style (the
+ * author's classDef / style / linkStyle) is left alone.
+ * Look: the diagram sits on a faint blueprint board; plain steps are quiet
+ * tiles, decisions carry the accent, edges are accent-tinted ink and their
+ * labels read as small chips instead of text lying on the line. */
+${F} [data-genui-mermaid] {
+  padding: 14px 12px; border-radius: 12px;
+  background:
+    linear-gradient(var(--cm-grid) 1px, transparent 1px) 0 0 / 18px 18px,
+    linear-gradient(90deg, var(--cm-grid) 1px, transparent 1px) 0 0 / 18px 18px,
+    color-mix(in srgb, var(--cm-accent) 3%, transparent);
+  box-shadow: inset 0 0 0 .5px var(--cm-edge);
+}
+${F} [data-genui-mermaid] svg { display: block; margin: 0 auto; overflow: visible; }
+${F} [data-genui-mermaid] svg foreignObject { overflow: visible; }
+${F} [data-genui-mermaid] .node :is(rect, circle, ellipse, polygon, path):not([style*="fill"]) {
+  fill: color-mix(in srgb, var(--cm-accent) 8%, var(--cm-fill)) !important;
+  stroke: color-mix(in srgb, var(--cm-accent) 42%, transparent) !important;
+  stroke-width: 1px !important;
+}
+${F} [data-genui-mermaid] .node { transition: filter .18s ease; }
+${F} [data-genui-mermaid] .node:hover { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cm-accent) 35%, transparent)); }
+${F} [data-genui-mermaid] .node:hover :is(rect, circle, ellipse, polygon, path):not([style*="stroke"]) { stroke: var(--cm-edge-hot) !important; }
+/* decisions (the diamond shape; v10 polygon, v11 path in a .question group) */
+${F} [data-genui-mermaid] :is(.node polygon, .node.question path, g[class*="question"] path):not([style*="fill"]) {
+  fill: color-mix(in srgb, var(--cm-accent) 18%, var(--cm-fill)) !important;
+  stroke: color-mix(in srgb, var(--cm-accent) 75%, transparent) !important;
+  stroke-width: 1.2px !important;
+}
+${F} [data-genui-mermaid] :is(.flowchart-link, .edgePath .path, .messageLine0, .messageLine1, .relation, .transition):not([style*="stroke:"]) {
+  stroke: color-mix(in srgb, var(--cm-accent) 55%, var(--dsw-alias-label-tertiary)) !important;
+  stroke-width: 1.5px !important; stroke-linecap: round; stroke-linejoin: round;
+}
+${F} [data-genui-mermaid] :is(marker path, .arrowheadPath, .arrowMarkerPath, #arrowhead path) {
+  fill: color-mix(in srgb, var(--cm-accent) 55%, var(--dsw-alias-label-tertiary)) !important;
+  stroke: none !important;
+}
+${F} [data-genui-mermaid] :is(.nodeLabel, .label, .actor tspan, text.actor, .messageText, .noteText, .loopText) {
+  color: var(--dsw-alias-label-primary) !important; fill: var(--dsw-alias-label-primary) !important;
+}
+${F} [data-genui-mermaid] .edgeLabel foreignObject > div {
+  display: inline-block !important; padding: 1px 7px; border-radius: 999px;
+  background: color-mix(in srgb, var(--cm-fill) 94%, transparent) !important;
+  box-shadow: 0 0 0 .5px var(--cm-edge);
+}
+${F} [data-genui-mermaid] .edgeLabel foreignObject > div * { background: transparent !important; }
+${F} [data-genui-mermaid] .edgeLabel :is(p, span) { color: var(--cm-accent) !important; }
+/* sequence / class / state shapes take the same tile look */
+${F} [data-genui-mermaid] :is(rect.actor, .classGroup rect, .stateGroup rect, g.statediagram-state rect):not([style*="fill"]) {
+  fill: color-mix(in srgb, var(--cm-accent) 8%, var(--cm-fill)) !important;
+  stroke: color-mix(in srgb, var(--cm-accent) 42%, transparent) !important;
+}
+${F} [data-genui-mermaid] rect.note:not([style*="fill"]) {
+  fill: color-mix(in srgb, var(--cm-accent) 12%, var(--cm-fill)) !important;
+  stroke: color-mix(in srgb, var(--cm-accent) 30%, transparent) !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .mg-hl, ${S} *, ${F} * { transition: none !important; }
   ${F} :is([data-composer-card], [class*="_card"]:has(> [class*="_input"], [contenteditable])) { top: 0 !important; }
@@ -693,6 +753,11 @@ body[data-cm-ui] :is([role="menu"], [role="listbox"]) :is([role="menuitem"], [ro
  * triggers, header actions, the changed-files rows...) stayed at 400 and the
  * text inside it too. Zero specificity: any DSH class weight still wins. */
 :where(body[data-cm-ui] ${F}) :is(button, input, select, textarea) { font-weight: var(--cm-w-ui, 400); }
+/* GenUI mermaid labels follow the interface weight. Keyed on the svg id, not
+ * the frame: Mermaid measures labels in an off-screen copy under <body>, and
+ * the box only fits the text if the weight is already applied there. */
+body[data-cm-ui]:not([data-hanmo-native]) svg[id^="genui-mermaid-"] :is(.nodeLabel, .label, text) { font-weight: var(--cm-w-ui, 400); }
+body[data-cm-ui]:not([data-hanmo-native]) svg[id^="genui-mermaid-"] .edgeLabel :is(p, span) { font-weight: min(900, calc(var(--cm-w-ui, 400) + 100)); }
 /* conversation header (agent team, subagents, background jobs): the slots
  * pass the weight down; the team counter hard-codes 400 */
 body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [class*="_headerUtilities"], [data-conversation-header-corner]),
@@ -908,7 +973,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.8'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.9'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
