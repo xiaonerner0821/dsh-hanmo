@@ -213,12 +213,19 @@ ${S} ${NEW_SESSION}::before {
   background-origin: border-box; background-clip: border-box;
   background-position: -40px -40px;
   /* no filter: the glow is drawn by the tail layers, so the head stays crisp */
+  /* (v1.1.6) three layers: the outside halo (bottom), the tile's interior
+   * cut out of it, then the interior put back at --cm-beam-inside. The ring
+   * (padding box) keeps full strength. The glow layers are drawn ~12%
+   * stronger, so the outside spread gains that while the inside, which read
+   * stronger against the tile fill, stays where it was. */
   -webkit-mask:
-    linear-gradient(#000 0 0) padding-box,
+    linear-gradient(rgba(0, 0, 0, var(--cm-beam-inside, .89)) 0 0) content-box,
+    linear-gradient(#000 0 0) content-box,
     linear-gradient(rgba(0, 0, 0, var(--cm-beam-top, .6)) ${BEAM_PAD - 8}px, rgba(0, 0, 0, var(--cm-beam-outside, 1)) ${BEAM_PAD}px) border-box;
-  -webkit-mask-composite: source-over;
+  -webkit-mask-composite: source-over, xor, source-over;
           mask:
-    linear-gradient(#000 0 0) padding-box add,
+    linear-gradient(rgba(0, 0, 0, var(--cm-beam-inside, .89)) 0 0) content-box add,
+    linear-gradient(#000 0 0) content-box exclude,
     linear-gradient(rgba(0, 0, 0, var(--cm-beam-top, .6)) ${BEAM_PAD - 8}px, rgba(0, 0, 0, var(--cm-beam-outside, 1)) ${BEAM_PAD}px) border-box;
   opacity: 0; transition: opacity .35s ease;
 }
@@ -828,7 +835,8 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
  * tools at 500) while the target beside it and some verbs without a weight of
  * their own ("上下文注入") inherit the chosen one, so one list mixed two
  * weights. The exit-code tag sets its own too. */
-body[data-cm-weight] ${F} [class*="_centerCol"] [data-tool] :is([class*="_title"], [class*="_badge"]) { font-weight: var(--cm-w-text, 400); }
+body[data-cm-weight] ${F} [class*="_centerCol"] [data-tool] :is([class*="_title"], [class*="_badge"]),
+body[data-cm-weight] ${F} [class*="_centerCol"] [data-variant="think"] [class*="_title"] { font-weight: var(--cm-w-text, 400); }
 /* the +N -N after a written file used the code font, 2px smaller than the row:
  * same font and size as the row, figures kept aligned */
 body:not([data-hanmo-native]) ${F} [class*="_centerCol"] [data-tool] [class*="_diffStat"] {
@@ -1029,20 +1037,23 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // (v1.1.5) the glow layers start a few px behind the head, so they
       // start on the first hue instead of white: a white glow there widened
       // the head point back into a white stroke
+      // (v1.1.6) G: ~12% stronger, paired with the interior mask at .89 (see
+      // the ::before), so only the spread outside the tile gains
+      const G = 1.12;
       for (let j = 0; j < 22; j++) {
         const k = j / 21, d = 4 + j * 4.2;
-        out.push([+(8 + 26 * k ** 0.8).toFixed(1), tint(Math.max(0.22, k)), +((0.46 * (1 - k) ** 1.35 + 0.015) * A * ramp(d, 4, 14)).toFixed(3), d]);
+        out.push([+(8 + 26 * k ** 0.8).toFixed(1), tint(Math.max(0.22, k)), +Math.min(1, (0.46 * (1 - k) ** 1.35 + 0.015) * A * G * ramp(d, 4, 14)).toFixed(3), d]);
       }
       // a middle sheath, spreading less, keeps the tail's body continuous
       for (let j = 0; j < 15; j++) {
         const k = j / 14, d = 3 + j * 5;
-        out.push([+(6 + 12 * k).toFixed(1), tint(Math.max(0.22, k * 0.85)), +((0.5 * (1 - k) ** 1.2 + 0.02) * A * ramp(d, 3, 10)).toFixed(3), d]);
+        out.push([+(6 + 12 * k).toFixed(1), tint(Math.max(0.22, k * 0.85)), +Math.min(1, (0.5 * (1 - k) ** 1.2 + 0.02) * A * G * ramp(d, 3, 10)).toFixed(3), d]);
       }
       // the soft glow round the coloured line (replaces the old whole-comet
       // drop-shadow, which also haloed the head)
       for (let i = 1; i <= 28; i++) {
         const k = i / 28, d = i * 5;
-        out.push([9, tint(Math.max(0.22, k)), +(0.38 * (1 - k ** 2) * A * ramp(d, 4, 12)).toFixed(3), d]);
+        out.push([9, tint(Math.max(0.22, k)), +Math.min(1, 0.38 * (1 - k ** 2) * A * G * ramp(d, 4, 12)).toFixed(3), d]);
       }
       return out;
     }
