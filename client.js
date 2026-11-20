@@ -995,8 +995,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // 6px box in both themes: the loop positions every layer by its box, so
       // the size must not depend on the theme; dark draws its old 4.5px solid
       // dot inside it and looks as before.
-      // (v1.1.5) the head is a point, not a white segment: the colour leaves
-      // white for the first hue (0.22) within ~3px, then holds it until the
+      // (v1.1.5) the head is a short white stroke, not a long one: the colour
+      // leaves white for the first hue (0.22) within ~8px, then holds it until the
       // old curve (k ** 0.75) catches up, so the rest of the trail keeps its
       // colours where they were. It used to fade white → cyan over ~19px.
       const headFast = (k, curve, px) => Math.max(curve, Math.min(0.22, k / px * 0.22));
@@ -1005,7 +1005,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         // 1.5x as many dots now overlap, so each is fainter by the matching
         // amount (a' = 1 - (1 - a) ** (1 / 1.5)) to keep the line's strength
         const a = 0.95 * A * (1 - k ** 2.2);
-        out.push([6, tint(headFast(k, k ** 0.75, 3 / 140)), +(1 - (1 - a) ** (1 / 1.5)).toFixed(3), i, 'solid', 'trace']);
+        out.push([6, tint(headFast(k, k ** 0.75, 8 / 140)), +(1 - (1 - a) ** (1 / 1.5)).toFixed(3), i, 'solid', 'trace']);
       }
       // the streak: tapers from 6px to 2px over ~24px, fading as it cools;
       // dots 0.8px apart with solid cores so it reads as one smooth stroke.
@@ -1015,7 +1015,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // made the head look thicker than the rest
       for (let i = 1; i <= 30; i++) {
         const k = i / 30;
-        out.push([+(4.5 - 2.5 * k).toFixed(1), tint(headFast(k, k, 2 / 24)), +(((1 - k) ** 1.7 * 0.95 + 0.03) * A).toFixed(3), i * 0.8, 'solid']);
+        out.push([+(4.5 - 2.5 * k).toFixed(1), tint(headFast(k, k, 5 / 24)), +(((1 - k) ** 1.7 * 0.95 + 0.03) * A).toFixed(3), i * 0.8, 'solid']);
       }
       // the tail: behind the head the glow spreads out, growing wider and
       // fainter the further back it trails, like a comet's tail fanning away
