@@ -112,6 +112,18 @@ ${S} ${PANEL_ROW} {
   transition: border-color .18s, box-shadow .18s, background .18s;
 }
 ${S}:not([class*="_collapsed"]) ${PANEL_ROW} { min-height: 32px; padding: 4px 9px; border-radius: 8px; gap: 9px; line-height: 20px; }
+/* 更多 is the same button, but DSH puts it straight in the menu anchor instead
+ * of a _panelEntry wrapper: the wrapper's transparent side borders inset the
+ * other rows, and the tile border above replaces that inset on 更多 alone, so
+ * it came out wider. Give its anchor the same inset, and pin every row to one
+ * height (the plugin-provided icons sit in a slot wrapper that can be a pixel
+ * or two taller than 更多's bare svg). */
+${S}:not([class*="_collapsed"]) [class*="_moreAnchor"] {
+  border-inline: var(--dsh-sidebar-paint-inset, 0px) solid transparent; box-sizing: border-box;
+}
+${S}:not([class*="_collapsed"]) [class*="_moreAnchor"] > ${PANEL_ROW} { width: 100%; margin: 0; }
+${S}:not([class*="_collapsed"]) ${PANEL_ROW} { height: 32px; box-sizing: border-box; }
+${S} ${PANEL_ROW} [class*="_panelGlyph"] { line-height: 0; }
 ${S}[class*="_collapsed"] ${PANEL_ROW} { border-radius: 8px; }
 ${S} ${PANEL_ROW}:hover { background: var(--cm-fill-hover); border-color: var(--cm-edge-hot); }
 ${S} ${PANEL_ROW} [class*="_panelGlyph"] { color: var(--cm-fg-2); }
@@ -1051,7 +1063,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.10'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.11'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
