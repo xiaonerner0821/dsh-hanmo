@@ -356,18 +356,24 @@ ${F} [class*="_tabs"] [class*="_tabActive"]::after { background: var(--cm-accent
  * a mid penumbra and a long soft drop, plus a lit top edge and a faintly
  * shaded bottom edge on the card itself. Typing lifts it a little higher. */
 ${F} {
-  --cm-float: 0 0 0 1px var(--cm-edge),
-    0 1px 1px rgba(15, 40, 60, .05), 0 3px 6px -2px rgba(15, 40, 60, .08),
-    0 14px 28px -10px rgba(15, 60, 90, .2), 0 34px 60px -26px rgba(15, 60, 90, .24),
-    inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(15, 40, 60, .05);
-  /* focus keeps the same faint outer ring as rest: a second, bright spread
-   * ring outside plus the accent ring inset on ::before were two outlines
-   * whose curves parted at DSH's superellipse corners. As in
-   * dsh-theme-liquid-glass, the lit rim is drawn inset only. */
-  --cm-float-hot: 0 0 0 1px var(--cm-edge), 0 0 18px rgba(14, 150, 190, .14),
-    0 2px 2px rgba(15, 40, 60, .05), 0 6px 10px -3px rgba(15, 40, 60, .09),
-    0 20px 36px -12px rgba(15, 60, 90, .24), 0 46px 76px -30px rgba(15, 60, 90, .28),
-    inset 0 1px 0 rgba(255, 255, 255, .95), inset 0 -1px 0 rgba(15, 40, 60, .05);
+  /* light: the rim is a crisp ink hairline, not the accent at a third (that
+   * read as a faint blue line on cream / tinted pages), and the shadows take
+   * the page's own ink instead of a fixed blue-grey, so they stay neutral on
+   * every palette */
+  --cm-ink-shade: var(--dsw-alias-label-primary);
+  --cm-float: 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary) 13%, transparent),
+    0 1px 1px color-mix(in srgb, var(--cm-ink-shade) 5%, transparent),
+    0 3px 6px -2px color-mix(in srgb, var(--cm-ink-shade) 7%, transparent),
+    0 14px 28px -12px color-mix(in srgb, var(--cm-ink-shade) 14%, transparent),
+    0 30px 56px -28px color-mix(in srgb, var(--cm-ink-shade) 16%, transparent);
+  /* focus: the hairline turns accent and a soft accent halo opens around it,
+   * one outline only (two rings parted at DSH's superellipse corners) */
+  --cm-float-hot: 0 0 0 1px color-mix(in srgb, var(--cm-accent) 55%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--cm-accent) 10%, transparent),
+    0 2px 2px color-mix(in srgb, var(--cm-ink-shade) 5%, transparent),
+    0 6px 10px -3px color-mix(in srgb, var(--cm-ink-shade) 8%, transparent),
+    0 20px 36px -14px color-mix(in srgb, var(--cm-ink-shade) 16%, transparent),
+    0 42px 70px -30px color-mix(in srgb, var(--cm-ink-shade) 18%, transparent);
 }
 :where([data-ds-dark-theme]) ${F} {
   --cm-float: 0 0 0 1px var(--cm-edge),
@@ -393,15 +399,13 @@ ${F} {
  * The lift uses relative top offset instead of transform for the same
  * containing-block reason. */
 ${F} {
-  --cm-glass-tint: color-mix(in srgb, var(--cm-fill) 42%, transparent);
+  /* light: a denser frosted sheet that sits a step above the page, with only
+   * a lit top lip. The white inner ring and inner glows of the dark recipe
+   * turned into a milky halo on light pages, blurring the edge. */
+  --cm-glass-tint: color-mix(in srgb, var(--cm-fill) 78%, transparent);
   --cm-glass-spec:
-    inset 0 1px 0 rgba(255, 255, 255, .45),
-    inset 0 0 0 1px rgba(255, 255, 255, .22),
-    inset 0 0 18px rgba(255, 255, 255, .10),
-    inset 0 0 36px rgba(255, 255, 255, .05),
-    inset 2px 2px 6px 2px rgba(255, 255, 255, .20),
-    inset -2px -2px 4px -1px rgba(255, 255, 255, .20),
-    0 0 24px rgba(255, 255, 255, .12);
+    inset 0 1px 0 rgba(255, 255, 255, .7),
+    inset 0 -1px 0 color-mix(in srgb, var(--dsw-alias-label-primary) 4%, transparent);
 }
 :where([data-ds-dark-theme]) ${F} {
   --cm-glass-tint: color-mix(in srgb, var(--cm-fill) 46%, transparent);
@@ -440,6 +444,9 @@ ${F} :is([data-composer-card], [class*="_card"]:has(> [class*="_input"], [conten
   /* focus only warms the existing rim: a soft accent glow spreading inward,
    * no extra hard line that would need its own corner curve */
   box-shadow: var(--cm-glass-spec), inset 0 0 14px color-mix(in srgb, var(--cm-accent) 22%, transparent);
+}
+body:not([data-ds-dark-theme]) ${F} :is([data-composer-card], [class*="_card"]:has(> [class*="_input"], [contenteditable])):focus-within::before {
+  box-shadow: var(--cm-glass-spec), inset 0 0 18px color-mix(in srgb, var(--cm-accent) 7%, transparent);
 }
 /* glass buttons inside the composer, also after dsh-theme-liquid-glass (MIT):
  *  - the command (+) button is a small lens: transparent itself, frost and
@@ -835,6 +842,20 @@ body:not([data-hanmo-native]) [data-changed-files] :is([class*="_row"], [class*=
 }
 body:not([data-hanmo-native]) [data-changed-files] [class*="_row"] [class*="_counts"] { font-size: 12px; }
 body:not([data-hanmo-native]) [data-changed-files] [class*="_statCounts"] { font-size: 11px; }
+/* file cards (已编辑 / presented files): a fill one step off the page alone
+ * left the edge to a .5px border at 8-14% ink, which vanished on pale pages.
+ * A full-pixel hairline at 16% ink plus a short contact shadow draws the
+ * outline; hover lifts the line toward the accent. */
+body:not([data-hanmo-native]) ${F} :is([data-changed-files], [data-presented-file]) {
+  border: 1px solid color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent) !important;
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent),
+    0 6px 16px -10px color-mix(in srgb, var(--dsw-alias-label-primary) 18%, transparent);
+  transition: border-color .18s, box-shadow .18s;
+}
+body:not([data-hanmo-native]) ${F} :is([data-changed-files], [data-presented-file]):hover {
+  border-color: color-mix(in srgb, var(--cm-accent) 45%, color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent)) !important;
+}
+body:not([data-hanmo-native]) ${F} [data-changed-files] [class*="_list"] { border-top-color: color-mix(in srgb, var(--dsw-alias-label-primary) 12%, transparent); }
 
 /* interface chrome: sidebar, the composer's permission / model pickers and the
  * conversation header tabs. DSH sizes these in fixed px, so each one is
@@ -1081,7 +1102,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.1.3'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.1.4'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -2008,8 +2029,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const over = (p, under = v.bg) => `color-mix(in srgb, ${v.text} ${p}%, ${under})`;
       const m = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
       return {
-        '--dsw-alias-card-fill': over(dark ? 4 : 2.5),
-        '--dsw-alias-card-fill-hover': over(dark ? 7 : 5),
+        '--dsw-alias-card-fill': over(dark ? 5 : 4.5),
+        '--dsw-alias-card-fill-hover': over(dark ? 8 : 7.5),
         '--dsw-alias-card-tile-fill': dark ? m(v.text, 5) : m(v.l1, 70),
         '--dsw-alias-button-floating-fill': dark ? v.l2 : v.l1,
         '--dsw-alias-button-floating-hover': over(dark ? 6 : 5, dark ? v.l2 : v.l1),
@@ -2065,10 +2086,10 @@ ${B} ${S} {
   --cm-beam-quiet: ${m(v.accent, 45)};
 }
 ${B} ${F} {
-  --cm-float-hot: 0 0 0 1px var(--cm-edge), 0 0 20px ${m(v.accent, 15)},
-    0 2px 2px rgba(${sh}, ${dark ? .3 : .05}), 0 6px 10px -3px rgba(${sh}, ${dark ? .45 : .09}),
-    0 20px 36px -12px rgba(${sh}, ${dark ? .6 : .24}), 0 46px 76px -30px rgba(${sh}, ${dark ? .65 : .28}),
-    inset 0 1px 0 rgba(255, 255, 255, ${dark ? .09 : .95}), inset 0 -1px 0 rgba(${dark ? '0, 0, 0, .25' : '15, 40, 60, .05'});
+${dark ? `  --cm-float-hot: 0 0 0 1px var(--cm-edge), 0 0 20px ${m(v.accent, 15)},
+    0 2px 2px rgba(${sh}, .3), 0 6px 10px -3px rgba(${sh}, .45),
+    0 20px 36px -12px rgba(${sh}, .6), 0 46px 76px -30px rgba(${sh}, .65),
+    inset 0 1px 0 rgba(255, 255, 255, .09), inset 0 -1px 0 rgba(0, 0, 0, .25);` : '  /* light: the shared ink-hairline recipe in the main stylesheet */'}
 }
 ${B} .cm-ap {
   --ap-fill: ${v.ov}; --ap-edge: ${m(v.accent, 32)}; --ap-hot: ${m(v.accent, 80)}; --ap-accent: ${v.accent};
