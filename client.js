@@ -298,6 +298,11 @@ ${F} {
   --cm-accent: #0b8aa8;
   --cm-accent-soft: rgba(11, 138, 168, .09);
   --cm-grid: rgba(15, 60, 80, .045);
+  /* data-series ramp for charts drawn by other plugins (GenUI): starts on the
+   * accent, then walks hues that sit at the same lightness so no series
+   * shouts louder than another */
+  --cm-series-1: #0b8aa8; --cm-series-2: #6e5ce6; --cm-series-3: #2f9e6a; --cm-series-4: #c98a14;
+  --cm-series-5: #d4574f; --cm-series-6: #2f6fd6; --cm-series-7: #a456c2; --cm-series-8: #5f7487;
   --cm-aurora: radial-gradient(70% 45% at 50% -8%, rgba(14, 150, 190, .06), transparent 70%);
   --cm-mono: var(--ds-font-family-code, ui-monospace, monospace);
   --dsh-scrollbar-thumb: rgba(110, 92, 230, .45);
@@ -313,6 +318,8 @@ ${F} {
   --cm-accent: #84dcee;
   --cm-accent-soft: rgba(132, 220, 238, .1);
   --cm-grid: rgba(160, 214, 236, .035);
+  --cm-series-1: #84dcee; --cm-series-2: #a497f5; --cm-series-3: #7fd8a6; --cm-series-4: #f2c46d;
+  --cm-series-5: #f08f8f; --cm-series-6: #6fa8f5; --cm-series-7: #d5a3e8; --cm-series-8: #9fb4c6;
   /* a low cyan horizon at the top of the stage, like light over deep water */
   --cm-aurora: radial-gradient(70% 50% at 50% -12%, rgba(86, 196, 226, .13), transparent 72%),
                radial-gradient(40% 30% at 88% -6%, rgba(146, 132, 240, .07), transparent 70%);
@@ -601,6 +608,77 @@ ${F} [data-genui-mermaid] rect.note:not([style*="fill"]) {
   fill: color-mix(in srgb, var(--cm-accent) 12%, var(--cm-fill)) !important;
   stroke: color-mix(in srgb, var(--cm-accent) 30%, transparent) !important;
 }
+
+/* ---- the rest of GenUI's charts: same blueprint language ----
+ * Token level first: GenUI derives every chart colour from a few custom
+ * properties it resolves at the element (also for ECharts, read through
+ * getComputedStyle when the chart mounts), so remapping them inside its
+ * blocks recolours bars, lines, donuts, plots and diagrams in one place. The
+ * series ramp keeps green / amber / red on green / amber / red hues, since
+ * GenUI also uses those three for meaning. A chart that names its own
+ * palette or colour is left as the author wrote it. */
+${F} :is([data-genui], [data-genui-plot]) {
+  --dsw-alias-state-business-primary: var(--cm-accent);
+  --dsl-g-accent: var(--cm-accent);
+  --dsw-static-deepseek-400: var(--cm-series-1);
+  --dsw-static-deepseek-450: var(--cm-series-2);
+  --dsw-static-green-400: var(--cm-series-3);
+  --dsw-static-amber-400: var(--cm-series-4);
+  --dsw-static-red-400: var(--cm-series-5);
+  --dsw-static-blue-450: var(--cm-series-6);
+  --dsw-static-deepseek-300: var(--cm-series-7);
+  --dsw-static-neutral-bluish-400: var(--cm-series-8);
+}
+/* one board for every plotted surface: hairline frame, faint accent wash */
+${F} :is([data-genui-chart], [data-genui-plot], [data-genui-echart], [data-genui-diagram], [data-genui-svg]) {
+  border-radius: 12px;
+}
+${F} :is([data-genui-chart="bars"], [data-genui-chart="line"], [data-genui-plot]) {
+  padding: 12px 14px 10px;
+  background: color-mix(in srgb, var(--cm-accent) 3%, transparent);
+  box-shadow: inset 0 0 0 .5px var(--cm-edge);
+}
+${F} [data-genui-echart] {
+  background: color-mix(in srgb, var(--cm-accent) 3%, var(--cm-fill)) !important;
+  border-color: var(--cm-edge) !important;
+}
+${F} :is([data-genui-diagram], [data-genui-svg]) { overflow: hidden; box-shadow: inset 0 0 0 .5px var(--cm-edge); }
+/* bars: a crisp column with a lit cap instead of a white-mixed gradient */
+${F} [data-genui-chart] [class*="_barFill"] {
+  background: linear-gradient(180deg, var(--cm-accent) 0 2px, color-mix(in srgb, var(--cm-accent) 62%, transparent) 2px, color-mix(in srgb, var(--cm-accent) 30%, transparent)) !important;
+  border-radius: 4px 4px 1px 1px;
+}
+${F} [data-genui-chart] [class*="_barFill"]:hover { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cm-accent) 45%, transparent)); }
+${F} [data-genui-chart] [class*="_hbarTrack"] { background: color-mix(in srgb, var(--cm-accent) 7%, transparent); }
+${F} [data-genui-chart] [class*="_hbarFill"]:not([style*="background"]) {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cm-accent) 45%, transparent), var(--cm-accent));
+}
+/* gridlines and axes recede: dashed hairlines in the accent's family */
+${F} [data-genui-chart] [class*="_gridline"] {
+  background: repeating-linear-gradient(90deg, var(--cm-edge) 0 3px, transparent 3px 7px);
+}
+${F} [data-genui-plot] [class*="_gridLine"] { stroke: var(--cm-edge); stroke-dasharray: 3 4; }
+${F} [data-genui-plot] [class*="_axis"] { stroke: color-mix(in srgb, var(--cm-accent) 40%, var(--dsw-alias-label-tertiary)); }
+${F} :is([data-genui-chart], [data-genui-plot]) :is([class*="_chartYTick"], [class*="_tick"], [class*="_barValue"], [class*="_hbarValue"]) {
+  font-family: var(--cm-mono);
+}
+${F} [data-genui-plot] [class*="_line"]:not([style*="stroke"]) { stroke-width: 2.2px; }
+/* donut: the ring gets a gap between slices and the total reads as a figure */
+${F} [data-genui-donut] [class*="_donutTrack"] { stroke: color-mix(in srgb, var(--cm-accent) 8%, transparent); }
+${F} [data-genui-donut] [class*="_donutSeg"]:hover { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cm-accent) 40%, transparent)); }
+${F} [data-genui-donut] [class*="_donutTotal"] { font-family: var(--cm-mono); }
+/* legends: rounded swatches, a touch smaller */
+${F} :is([data-genui-chart], [data-genui-plot]) [class*="_legendSwatch"] { border-radius: 99px; }
+/* hover tips: the same frosted chip as the composer stats */
+${F} :is([data-genui-chart], [data-genui-plot]) [class*="_chartTip"] {
+  background: color-mix(in srgb, var(--cm-fill) 86%, transparent) !important;
+  border-color: var(--cm-edge-hot) !important;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: 0 8px 22px -10px rgba(0, 0, 0, .45);
+}
+/* plot controls follow the accent */
+${F} [data-genui-plot] :is([class*="_playBtn"], [class*="_plotReset"]:hover, [class*="_resetBtn"]:hover) { border-color: var(--cm-edge-hot); }
+${F} [data-genui-plot] [class*="_animFill"] { background: linear-gradient(90deg, color-mix(in srgb, var(--cm-accent) 50%, transparent), var(--cm-accent)); }
 
 @media (prefers-reduced-motion: reduce) {
   .mg-hl, ${S} *, ${F} * { transition: none !important; }
@@ -973,7 +1051,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.0.9'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.0.10'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -1895,6 +1973,7 @@ ${B} ${S}, ${B} ${F} {
   --cm-accent: ${v.accent};
   --cm-accent-soft: ${m(v.accent, 10)};
   --cm-grid: ${m(v.text, 4)};
+  --cm-series-1: ${v.accent}; --cm-series-2: ${v.accent2};
   --cm-aurora: radial-gradient(70% 45% at 50% -8%, ${m(v.accent, dark ? 12 : 6)}, transparent 70%);
   --cm-spot-a: ${m(v.accent, dark ? 16 : 10)}; --cm-spot-b: ${m(v.accent2, 6)};
 }
