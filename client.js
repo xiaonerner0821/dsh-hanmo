@@ -2340,6 +2340,20 @@ ${MN} ${F} [class*="_centerCol"] {
   background: ${mainSkyGradient(v, dark)} !important;
 }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
+${v.sunTop ? `/* a sun at the top lights the very strip where the header tabs and the
+ * first lines of the transcript sit. A veil of the page, under the content
+ * (z-index -1 in an isolated column), settles the sky there to reading
+ * strength: densest at the top edge, gone by ~240px. It fades in from the
+ * left over 160px, so at the seam the sky still meets the sidebar's
+ * unbroken, and the dawn keeps glowing across the rest of the panel. */
+${MN} ${F} [class*="_centerCol"] { position: relative; isolation: isolate; }
+${MN} ${F} [class*="_centerCol"]::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 240px; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, ${m(v.bg, dark ? 66 : 58)}, ${m(v.bg, dark ? 40 : 34)} 42%, ${m(v.bg, 0)});
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 160px); mask-image: linear-gradient(90deg, transparent, #000 160px);
+}
+/* header tabs: a faint lift of the ink so the labels hold on warm light */
+${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) { text-shadow: 0 0 10px ${m(v.bg, dark ? 70 : 80)}; }` : ''}
 /* both on: one sky across the window. The main panel continues the sidebar's
  * sky at full strength from the shared edge and veils it toward the reading
  * strength; the sidebar's sun moves onto the seam to meet the main panel's
