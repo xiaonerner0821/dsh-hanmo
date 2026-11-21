@@ -793,7 +793,7 @@ body[data-cm-glass] ${F} :is([role="menu"], [role="listbox"], [role="dialog"], [
  * Only the bars that actually stick: every run-detail row carries a
  * disclosure header, and frosting all of them striped the transcript with
  * page-coloured bands (they only stick once opened). */
-body[data-cm-glass] ${F} :is([class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
+body[data-cm-glass] ${F} :is([class*="_compactionRow"]:has([class*="_compactionBody"]) [class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
   background: color-mix(in srgb, var(--cm-base) 72%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
@@ -1955,8 +1955,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         dark: { bg: '#141a2c', side: '#121829', l1: '#1c2338', l2: '#252d45', l3: '#2f3853', ov: '#1d243a', code: '#10162a',
           text: '#eef0f6', dim: '#b9bfd2', faint: '#7f88a3', accent: '#ffb46b', accent2: '#7fb2ff', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a88',
           kw: '#ff9ec0', str: '#ffd27a', fn: '#ffb46b', num: '#9cc4ff', type: '#ffe08a', com: '#717b98', punc: '#c8cede',
-          sky: [['#8a5244', 0], ['#6b4256', 10], ['#4b3a62', 24], ['#33335f', 42], ['#242b52', 62], ['#1a2244', 82], ['#131a35', 100]],
-          sun: 'rgba(255, 188, 120, .45)', haze: ['rgba(255, 150, 100, .08)', 'rgba(110, 150, 240, .06)'] },
+          sky: [['#9a5a46', 0], ['#82495a', 13], ['#644268', 28], ['#473b69', 44], ['#2f3261', 62], ['#1f2749', 81], ['#141b37', 100]],
+          sun: 'rgba(255, 184, 116, .5)', sunScale: 1.8, haze: ['rgba(255, 150, 100, .1)', 'rgba(110, 150, 240, .06)'] },
         light: { bg: '#fffcf7', side: '#fbf4ec', l1: '#ffffff', l2: '#fdf6ee', l3: '#f6ebe0', ov: '#ffffff', code: '#fbf6ef',
           text: '#24283a', dim: '#55597a', faint: '#8d90a8', accent: '#d27410', accent2: '#2f78c9', ok: '#2a8a57', warn: '#a86a00', err: '#c9364c',
           kw: '#c4436a', str: '#a8620c', fn: '#d27410', num: '#2f78c9', type: '#8c6400', com: '#9b9cb0', punc: '#44475c',
@@ -1999,11 +1999,17 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
-    function skyGradient(v, alpha, sunAt) {
+    function skyGradient(v, alpha, sunAt, size) {
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
-      return `radial-gradient(120% 22% at ${at}, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
+      return `radial-gradient(${sunSize(v, size || [120, 22])} at ${at}, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
     }
+    /** A sun glow's ellipse, widened and deepened by the variant's sunScale
+     * (朝阳's dark first light spreads further down the sky). */
+    const sunSize = (v, [w, h]) => {
+      const k = v.sunScale || 1;
+      return `${Math.round(w * Math.min(k, 1.25))}% ${Math.round(h * k)}%`;
+    };
     const rgbHex = (c) => `#${c.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('')}`;
     const mixHex = (a, b, t) => rgbHex(mixRgb(hexRgb(a), hexRgb(b), t));
     const rgba = (hex, a) => `rgba(${hexRgb(hex).join(', ')}, ${a})`;
@@ -2056,7 +2062,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const keep = dark ? 0.5 : 0.55;
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
-      return `radial-gradient(70% 18% at 50% ${v.sunTop ? '-4%' : '104%'}, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
+      return `radial-gradient(${sunSize(v, [70, 18])} at 50% ${v.sunTop ? '-4%' : '104%'}, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
     }
     /** Main panel when the sidebar carries the sky too: one sky across both.
      * The full-strength sky runs on from the sidebar's edge (same stops at the
@@ -2070,7 +2076,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const full = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${a}, transparent) ${p}%`).join(', ');
       const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
       return [
-        `radial-gradient(46% 20% at 0% ${v.sunTop ? '-3%' : '103%'}, ${v.sun}, transparent 72%)`,
+        `radial-gradient(${sunSize(v, [46, 20])} at 0% ${v.sunTop ? '-3%' : '103%'}, ${v.sun}, transparent 72%)`,
         `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
         `linear-gradient(180deg, ${full})`,
       ].join(', ');
@@ -2326,7 +2332,7 @@ ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !impo
 ${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] { background: ${joinedSkyGradient(v, dark)} !important; }
 ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
-  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%').replace('radial-gradient(120% 22%', 'radial-gradient(70% 20%')} !important;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%', [70, 20])} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
 /* sticky bars over the transcript: only those that stick (an opened row, the
@@ -2334,14 +2340,15 @@ ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-
  * (each row has a disclosure header, and a band under every one of them
  * striped the transcript). The strip fades out at both ends and sits on a
  * hairline, so it reads as glass laid over the sky, not a pasted block. */
-${MN} ${F} [class*="_centerCol"] [data-disclosure-header] { background: none; }
-${MN} ${F} [class*="_centerCol"] :is([class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
+${MN} ${F} [class*="_centerCol"] [data-disclosure-header],
+${MN} ${F} [class*="_centerCol"] [class*="_compactionButton"] { background: none; }
+${MN} ${F} [class*="_centerCol"] :is([class*="_compactionRow"]:has([class*="_compactionBody"]) [class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
   background: linear-gradient(90deg, ${m(v.bg, 0)}, ${m(v.bg, 78)} 18px, ${m(v.bg, 78)} calc(100% - 18px), ${m(v.bg, 0)});
   box-shadow: 0 1px 0 ${m(v.text, 6)};
   -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15);
 }
 /* closed rows: a soft hover wash instead of DSH's flat grey, tinted by the sky */
-${MN} ${F} [class*="_centerCol"] [data-disclosure-row][data-expandable]:hover {
+${MN} ${F} [class*="_centerCol"] :is([data-disclosure-row][data-expandable], [class*="_compactionButton"]:not(:disabled)):hover {
   background: ${m(v.l1, dark ? 36 : 46)}; border-radius: 6px;
 }
 /* the composer seat's page-coloured fade would band across the sky: the
