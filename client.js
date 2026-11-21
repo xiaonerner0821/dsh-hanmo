@@ -1132,7 +1132,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.1.6'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.2.0'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -1979,6 +1979,60 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
       return `radial-gradient(120% 22% at 50% 102%, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
     }
+    const rgbHex = (c) => `#${c.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('')}`;
+    const mixHex = (a, b, t) => rgbHex(mixRgb(hexRgb(a), hexRgb(b), t));
+    const rgba = (hex, a) => `rgba(${hexRgb(hex).join(', ')}, ${a})`;
+    /* Han has no palette object (DSH's own light / dark plus the main
+     * stylesheet), so the sky borrows these stand-ins for its tones */
+    const HAN_SKY = {
+      light: { bg: '#ffffff', side: '#f6f8fa', l1: '#ffffff', l2: '#f2f5f8', text: '#1d2b3a',
+        accent: '#0b8aa8', accent2: '#6e5ce6', kw: '#c2416d', warn: '#d98a2b' },
+      dark: { bg: '#1a212b', side: '#151b23', l1: '#212a34', l2: '#28323e', text: '#dbe4ec',
+        accent: '#84dcee', accent2: '#9284f0', kw: '#ef8fb8', warn: '#f2c46d' },
+    };
+    /** The sky of one theme variant: 落日 brings its own; every other theme
+     * gets one painted from its palette, the same story in its own colours —
+     * zenith toward its cool second accent, through its keyword hue, down to a
+     * warm horizon on its warning tone, with its accent as the band between.
+     * Light skies stay pale (12-30% over the page), dark ones deepen. */
+    function skyOf(v, dark) {
+      if (v.sky) return v;
+      const bg = v.bg, warm = v.warn || '#e0a040';
+      // the zenith takes the palette's coolest hue (nearest blue, ~225°) and the
+      // dusk band the most rosy one (nearest magenta-red, ~330°), whichever
+      // tokens carry them in this theme, so every sky runs cool → rose → warm
+      const hue = (hx) => {
+        const [r, g, b] = hexRgb(hx).map((x) => x / 255);
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+        if (!d) return -999;
+        const hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        return (hh * 60 + 360) % 360;
+      };
+      const near = (target) => (a, b) => {
+        const dist = (x) => { const k = Math.abs(hue(x) - target); return Math.min(k, 360 - k); };
+        return dist(a) - dist(b);
+      };
+      const pool = [v.accent, v.accent2, v.kw, v.fn, v.num, v.type].filter((c) => typeof c === 'string' && c[0] === '#');
+      const cool = [...pool].sort(near(225))[0] || v.accent;
+      const rose = [...pool].filter((c) => c !== cool).sort(near(330))[0] || v.accent2;
+      const mid = mixHex(cool, rose, 0.5);
+      const sky = dark
+        ? [[mixHex(v.side || bg, cool, 0.12), 0], [mixHex(bg, cool, 0.20), 26],
+          [mixHex(bg, mid, 0.20), 50], [mixHex(bg, rose, 0.24), 74], [mixHex(bg, warm, 0.30), 100]]
+        : [[mixHex(bg, cool, 0.16), 0], [mixHex(bg, mid, 0.13), 28],
+          [mixHex(bg, rose, 0.14), 56], [mixHex(bg, warm, 0.20), 80], [mixHex(bg, warm, 0.30), 100]];
+      return { ...v, sky, sun: rgba(warm, dark ? 0.32 : 0.5), haze: [rgba(cool, 0.06), rgba(warm, 0.07)] };
+    }
+    /** The main panel's version of a sky: the same stops folded back toward
+     * the page (55% page in light, 50% in dark) so long text stays easy to
+     * read, a softer sun low behind the composer, and the panel opacity
+     * setting carried by every stop. */
+    function mainSkyGradient(v, dark) {
+      const keep = dark ? 0.5 : 0.55;
+      const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
+      const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
+      return `radial-gradient(70% 18% at 50% 104%, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
+    }
     const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
     const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
     /** Comet colour stops for one theme variant, in beamDots' format. */
@@ -2163,33 +2217,16 @@ ${B} ${S}:not([class*="_collapsed"]) ${NEW_SESSION}:hover {
 }
 ${B} ${S} ${NEW_SESSION} svg { filter: drop-shadow(0 0 4px ${m(v.accent, 60)}); }
 `;
-      if (v.sky) css += skyCss(B, v, dark, m);
+      if (v.sky) css += sunsetCss(B, v, dark, m);
       return css;
     }
-    /** The extra layer of a sky theme. The sidebar column paints the sky
-     * itself and empties the sidebar-fill token inside it, so the nested
-     * layers that repaint that token let the gradient through (popups get
-     * the solid tone back). With the see-through setting on, the stops take
-     * its opacity and the column's frosted ::before keeps only its blur. */
-    function skyCss(B, v, dark, m) {
-      const solidPopups = ':is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover])';
+    /** 落日's own touches, on whatever the sky setting: the sunset New Session
+     * fill, the warm selection, and the faint cool-to-warm haze on the main
+     * panel (left out once the main panel carries the sky itself). */
+    function sunsetCss(B, v, dark, m) {
       return `
-${B} ${F} [class*="_sidebarCol"] {
-  --dsw-specific-sidebar-fill: transparent;
-  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)')} !important;
-}
-${B} ${F} [class*="_sidebarCol"] ${solidPopups} { --dsw-specific-sidebar-fill: ${v.side}; }
-${B}[data-cm-glass] ${F} [class*="_sidebarCol"]::before { background: none !important; }
-/* tiles sit on the sky as frosted glass instead of solid blocks */
-${B} ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
-  background: ${m(v.l1, dark ? 58 : 66)};
-  -webkit-backdrop-filter: blur(8px) saturate(1.2); backdrop-filter: blur(8px) saturate(1.2);
-}
-${B} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
-/* the main panel: a solid page under a faint haze, cool at the top and warm
- * toward the composer, like the light low in the west */
-${B} ${F} [class*="_centerCol"] { position: relative; }
-${B} ${F} [class*="_centerCol"]::after {
+${B}:not([data-cm-sky-main]) ${F} [class*="_centerCol"] { position: relative; }
+${B}:not([data-cm-sky-main]) ${F} [class*="_centerCol"]::after {
   content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
   background: linear-gradient(180deg, ${v.haze[0]}, transparent 38%, transparent 62%, ${v.haze[1]});
 }
@@ -2205,6 +2242,68 @@ ${B} ${S}:not([class*="_collapsed"]) ${NEW_SESSION} {
 ${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
 `;
     }
+    /** The sky, where the 渐变天空 setting puts it (body[data-cm-sky-sb] /
+     * [data-cm-sky-main]). Any theme but DeepSeek Harness: `v` is its variant
+     * (or Han's stand-in), and skyOf() paints one for themes without their own.
+     * Sidebar: the column paints the full sky and empties the sidebar-fill
+     * token inside it, so the nested layers that repaint that token let it
+     * through (popups get the solid tone back); tiles turn to frosted glass.
+     * Main panel: the same trick with the page token, and a softer sky; the
+     * file view, popups and sticky bars keep a solid or frosted page. With the
+     * see-through setting on, the stops take its opacity and the column's
+     * frosted ::before keeps only its blur. */
+    function skyCss(B, v0, dark) {
+      const v = skyOf(v0, dark);
+      const m = (c, p) => `color-mix(in srgb, ${c} ${p}%, transparent)`;
+      const solidPopups = ':is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover])';
+      const SB = `${B}[data-cm-sky-sb]`, MN = `${B}[data-cm-sky-main]`;
+      return `
+${SB} ${F} [class*="_sidebarCol"] {
+  --dsw-specific-sidebar-fill: transparent;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)')} !important;
+}
+${SB} ${F} [class*="_sidebarCol"] ${solidPopups} { --dsw-specific-sidebar-fill: ${v.side}; }
+${SB}[data-cm-glass] ${F} [class*="_sidebarCol"]::before { background: none !important; }
+/* tiles sit on the sky as frosted glass instead of solid blocks */
+${SB} ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
+  background: ${m(v.l1, dark ? 58 : 66)};
+  -webkit-backdrop-filter: blur(8px) saturate(1.2); backdrop-filter: blur(8px) saturate(1.2);
+}
+${SB} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
+
+${MN} ${F} [class*="_centerCol"] {
+  --dsw-alias-bg-base: transparent;
+  --dsw-linear-gradient-think: linear-gradient(180deg, transparent, transparent);
+  background: ${mainSkyGradient(v, dark)} !important;
+}
+${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
+${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
+/* sticky bars over the transcript: frosted page, so text sliding under stays quiet */
+${MN} ${F} [class*="_centerCol"] :is([class*="_compactionButton"], [data-disclosure-header]) {
+  background: ${m(v.bg, 70)};
+  -webkit-backdrop-filter: blur(12px) saturate(1.1); backdrop-filter: blur(12px) saturate(1.1);
+}
+/* the composer seat's page-coloured fade would band across the sky: the
+ * glass composer stands on its own */
+${MN} ${F} [class*="_centerCol"] [class*="_composerSeat"] { background: none !important; }
+/* cards on the sky: a touch of the page under them so they stay legible */
+${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { background: color-mix(in srgb, var(--cm-accent) 10%, ${m(v.bg, 70)}); }
+`;
+    }
+    function skyCssFor(t) {
+      if (t.id === DSH_ID) return '';
+      if (t.id === HAN_ID) {
+        return ['light', 'dark'].map((s) => skyCss(
+          `html:root body:not([data-cm-theme]):not([data-hanmo-native])${s === 'dark' ? '[data-ds-dark-theme]' : ':not([data-ds-dark-theme])'}`,
+          HAN_SKY[s], s === 'dark')).join('\n');
+      }
+      return t.schemes.filter((s) => t[s]).map((s) => skyCss(
+        `html:root body[data-cm-theme="${t.id}"]${s === 'dark' ? '[data-ds-dark-theme]' : ':not([data-ds-dark-theme])'}`,
+        t[s], s === 'dark')).join('\n');
+    }
+    /** Where the sky goes by default: 落日 paints its sidebar (how it looked
+     * when it shipped), every other theme starts plain. */
+    const skyDefault = (id) => ({ sb: id === 'sunset', main: false });
 
     const THEME_KEY = 'hanmo:theme';
     const MODES = ['light', 'dark', 'system'];
@@ -2247,14 +2346,19 @@ ${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
         const t = byId(state.id);
         if (!t || plain(t.id)) {
           document.body.removeAttribute('data-cm-theme');
-          sheet.textContent = '';
         } else {
-          if (!cache.has(t.id)) cache.set(t.id, themeCss(t));
-          sheet.textContent = cache.get(t.id);
           document.body.setAttribute('data-cm-theme', t.id);
         }
+        const key = t ? t.id : HAN_ID;
+        if (!cache.has(key)) cache.set(key, (t && !plain(t.id) ? themeCss(t) : '') + (t ? skyCssFor(t) : ''));
+        sheet.textContent = cache.get(key);
+        // where this theme's sky goes (each theme remembers its own choice)
+        const sky = skyOf_(key);
+        document.body.toggleAttribute('data-cm-sky-sb', !!(t && t.id !== DSH_ID && sky.sb));
+        document.body.toggleAttribute('data-cm-sky-main', !!(t && t.id !== DSH_ID && sky.main));
         if (!sheet.isConnected) document.head.append(sheet);
       };
+      const skyOf_ = (id) => ({ ...skyDefault(id), ...((state.skies || {})[id] || {}) });
       const register = () => {
         if (disposers.length || typeof bridge.register !== 'function') return;
         for (const t of THEMES) {
@@ -2371,6 +2475,15 @@ ${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
           look.set({ ink: state.inks[id] || (id === HAN_ID ? LOOK_DEFAULT.ink : 'neutral') });
           notify();
         },
+        /** Where the current theme's sky gradient goes: { sb, main }. */
+        sky: () => skyOf_(state.id),
+        setSky(patch) {
+          const skies = { ...(state.skies || {}), [state.id]: { ...skyOf_(state.id), ...patch } };
+          state = { ...state, skies };
+          save();
+          paint();
+          notify();
+        },
         /** Text colour for the current theme (each theme remembers its own). */
         setInk(ink) {
           state = { ...state, inks: { ...state.inks, [state.id]: ink } };
@@ -2388,8 +2501,9 @@ ${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
         },
         reset() {
           this.select(HAN_ID);
-          state = { ...state, inks: {} };
+          state = { ...state, inks: {}, skies: {} };
           save();
+          paint();
           notify();
         },
         apply() {
@@ -2413,6 +2527,8 @@ ${B} ${F} ::selection { background: ${m(v.accent, dark ? 32 : 26)}; }
         },
         clear() {
           document.body.removeAttribute('data-cm-theme');
+          document.body.removeAttribute('data-cm-sky-sb');
+          document.body.removeAttribute('data-cm-sky-main');
           native.set(false);
           sheet.remove();
           // leave DSH on a built-in theme before the registrations go
@@ -2502,6 +2618,30 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 .cm-ap-foot { display: flex; justify-content: flex-end; padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--ap-edge) 60%, transparent); }
 .cm-ap-foot button { border: 0; background: none; cursor: pointer; color: var(--ap-accent); font: inherit; font-size: 12px; padding: 2px 4px; }
 .cm-ap-note { margin: 0 0 12px; padding: 8px 10px; border-radius: 8px; background: var(--ap-soft); color: var(--dsw-alias-label-secondary); font-size: 12px; line-height: 1.6; }
+/* 渐变天空: two switch tiles, each a miniature window that shows the sky
+ * where that switch puts it */
+.cm-ap-sky { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 360px; }
+.cm-ap-sky-tile { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 10px;
+  border: 1px solid var(--ap-edge); background: none; cursor: pointer; font: inherit; color: var(--dsw-alias-label-secondary);
+  text-align: left; transition: border-color .18s, box-shadow .18s, transform .18s cubic-bezier(.32, .72, 0, 1); }
+.cm-ap-sky-tile:hover { border-color: var(--ap-hot); transform: translateY(-1px); }
+.cm-ap-sky-tile:focus-visible { outline: none; box-shadow: var(--ap-glow); }
+.cm-ap-sky-tile[aria-checked="true"] { border-color: var(--ap-hot); box-shadow: var(--ap-glow); color: var(--dsw-alias-label-primary); }
+.cm-ap-sky-win { position: relative; display: grid; grid-template-columns: 30% 1fr; height: 42px; border-radius: 6px; overflow: hidden;
+  box-shadow: inset 0 0 0 .5px var(--dsw-alias-border-l2); }
+.cm-ap-sky-win > u { background: var(--sky-sb); background-size: 100% 100%; }
+.cm-ap-sky-win > b { position: relative; background: var(--sky-main); }
+/* two "lines of text" in the panel: the tile's promise that text still reads */
+.cm-ap-sky-win > b::before, .cm-ap-sky-win > b::after { content: ''; position: absolute; left: 14%; height: 3px; border-radius: 2px;
+  background: var(--sky-ink); opacity: .55; }
+.cm-ap-sky-win > b::before { top: 13px; width: 58%; }
+.cm-ap-sky-win > b::after { top: 21px; width: 40%; opacity: .35; }
+.cm-ap-sky-tile:not([aria-checked="true"]) .cm-ap-sky-win { filter: saturate(.35); opacity: .7; }
+.cm-ap-sky-tile > span { display: flex; align-items: center; justify-content: space-between; font-size: 12px; padding: 0 2px; }
+.cm-ap-sky-tile > span > em { font-style: normal; font-size: 11px; padding: 0 6px; border-radius: 99px; line-height: 16px;
+  color: var(--dsw-alias-label-tertiary); background: color-mix(in srgb, var(--dsw-alias-label-primary) 6%, transparent); }
+.cm-ap-sky-tile[aria-checked="true"] > span > em { color: var(--ap-accent); background: var(--ap-soft); }
+@media (prefers-reduced-motion: reduce) { .cm-ap-sky-tile { transition: none; } .cm-ap-sky-tile:hover { transform: none; } }
 .cm-ap-inks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .cm-ap-ink { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 7px; border-radius: 7px; border: 1px solid var(--ap-edge);
   background: none; cursor: pointer; color: inherit; font: inherit; font-size: 12px; text-align: left; transition: border-color .18s, box-shadow .18s, background .18s; }
@@ -2622,6 +2762,34 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       };
     }
 
+    /** 渐变天空: two tiles, each a tiny window (sidebar rail + main panel)
+     * painted with the current theme's sky where that tile turns it on, so
+     * the choice previews itself. Shared by the popover and Settings. */
+    function SkyControls({ themes, scheme }) {
+      const ts = React.useSyncExternalStore(themes.subscribe, themes.get);
+      const t = themes.theme();
+      if (t.id === DSH_ID) return null;
+      const sky = themes.sky();
+      const s = t.schemes.includes(scheme) ? scheme : t.schemes[0];
+      const v = skyOf(t[s] || HAN_SKY[s], s === 'dark');
+      const full = skyGradient(v, '100%');
+      const soft = mainSkyGradient(v, s === 'dark').replaceAll('calc(var(--cm-main-alpha, 1) * 100%)', '100%');
+      const tile = (key, label, hint) => {
+        const on = !!sky[key];
+        return h('button', {
+          key, type: 'button', role: 'switch', 'aria-checked': String(on), className: 'cm-ap-sky-tile',
+          title: hint, onClick: () => themes.setSky({ [key]: !on }),
+        },
+        h('i', { className: 'cm-ap-sky-win', 'aria-hidden': 'true', 'data-part': key, style: {
+          '--sky-sb': key === 'sb' ? full : v.side, '--sky-main': key === 'main' ? soft : v.bg, '--sky-ink': v.text,
+        } }, h('u', null), h('b', null)),
+        h('span', null, label, h('em', null, on ? '开' : '关')));
+      };
+      void ts;
+      return h('div', { className: 'cm-ap-sky', role: 'group', 'aria-label': '渐变天空' },
+        tile('sb', '侧边栏', '左侧侧边栏铺满从天顶到地平线的渐变'),
+        tile('main', '主面板', '对话区铺一层更柔和的同色渐变，正文仍然清晰'));
+    }
     function AppearanceControls({ bridge, look, themes }) {
       const snap = React.useSyncExternalStore(bridge.subscribe, bridge.snapshot);
       const lk = React.useSyncExternalStore(look.subscribe, look.get);
@@ -2760,6 +2928,8 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
             weightRow('wUi', '字重')),
           h('p', { key: 's5', className: 'cm-ap-sec' }, '主面板文字颜色'),
           inkList,
+          h('p', { key: 's5s', className: 'cm-ap-sec', title: '把主题配色画成一片日落天空的渐变；每套主题分别记住自己的选择' }, '渐变天空'),
+          h(SkyControls, { key: 'sky', themes, scheme }),
           h('p', { key: 's6', className: 'cm-ap-sec' }, '面板不透明度'),
           h('div', { key: 'op' }, rangeRow('sbAlpha', '侧边栏'), rangeRow('mainAlpha', '主面板')),
         ]),
@@ -4207,7 +4377,11 @@ body:not([data-hanmo-native]) .JObwrW_root::before,
               h('div', { className: 'cm-ap-row-title' }, '配色主题'),
               h('div', { className: 'cm-ap-row-desc' }, '来自 Hanmo 插件。也可以在会话标题栏的「外观与字体」里切换，那里还能调字体和文字颜色。')),
             h('div', { className: 'cm-ap-themes cm-ap-themes-wide', role: 'radiogroup', 'aria-label': '配色主题' },
-              THEMES.map((t) => themeCard(t, ts.id === t.id, scheme, () => themes.select(t.id)))));
+              THEMES.map((t) => themeCard(t, ts.id === t.id, scheme, () => themes.select(t.id)))),
+            ts.id === DSH_ID ? null : h('div', { className: 'cm-ap-row-text' },
+              h('div', { className: 'cm-ap-row-title' }, '渐变天空'),
+              h('div', { className: 'cm-ap-row-desc' }, '把当前主题的配色画成一片日落天空，可分别铺到侧边栏和主面板。每套主题各自记住选择。')),
+            h(SkyControls, { themes, scheme }));
         }
         ctx.slots.inject('settings.general.item', () => ctx.slots.register({
           name: 'settings.general.item', id: 'hanmo-color-theme', order: 10.5,
