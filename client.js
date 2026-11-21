@@ -789,8 +789,11 @@ body[data-cm-glass] ${F} :is([role="menu"], [role="listbox"], [role="dialog"], [
   --dsw-specific-sidebar-fill: var(--cm-sbfill);
 }
 /* sticky bars inside the transcript would turn see-through with the emptied
- * token and let text slide under them unreadably: give them frosted glass */
-body[data-cm-glass] ${F} :is([class*="_compactionButton"], [data-disclosure-header]) {
+ * token and let text slide under them unreadably: give them frosted glass.
+ * Only the bars that actually stick: every run-detail row carries a
+ * disclosure header, and frosting all of them striped the transcript with
+ * page-coloured bands (they only stick once opened). */
+body[data-cm-glass] ${F} :is([class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
   background: color-mix(in srgb, var(--cm-base) 72%, transparent);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
 }
@@ -1132,7 +1135,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.2.1'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.2.2'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -2304,10 +2307,20 @@ ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)').replace('radial-gradient(120% 22% at 50% 102%', 'radial-gradient(70% 20% at 100% 103%')} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
-/* sticky bars over the transcript: frosted page, so text sliding under stays quiet */
-${MN} ${F} [class*="_centerCol"] :is([class*="_compactionButton"], [data-disclosure-header]) {
-  background: ${m(v.bg, 70)};
-  -webkit-backdrop-filter: blur(12px) saturate(1.1); backdrop-filter: blur(12px) saturate(1.1);
+/* sticky bars over the transcript: only those that stick (an opened row, the
+ * compaction bar) get a frosted strip; closed run-detail rows stay on the sky
+ * (each row has a disclosure header, and a band under every one of them
+ * striped the transcript). The strip fades out at both ends and sits on a
+ * hairline, so it reads as glass laid over the sky, not a pasted block. */
+${MN} ${F} [class*="_centerCol"] [data-disclosure-header] { background: none; }
+${MN} ${F} [class*="_centerCol"] :is([class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
+  background: linear-gradient(90deg, ${m(v.bg, 0)}, ${m(v.bg, 78)} 18px, ${m(v.bg, 78)} calc(100% - 18px), ${m(v.bg, 0)});
+  box-shadow: 0 1px 0 ${m(v.text, 6)};
+  -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15);
+}
+/* closed rows: a soft hover wash instead of DSH's flat grey, tinted by the sky */
+${MN} ${F} [class*="_centerCol"] [data-disclosure-row][data-expandable]:hover {
+  background: ${m(v.l1, dark ? 36 : 46)}; border-radius: 6px;
 }
 /* the composer seat's page-coloured fade would band across the sky: the
  * glass composer stands on its own */
