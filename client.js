@@ -1943,7 +1943,28 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           kw: '#c2416d', str: '#b0621a', fn: '#d4553a', num: '#7a5ad4', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
           sky: [['#c7d7ef', 0], ['#d9d6ef', 20], ['#ead4e8', 40], ['#f6d2d2', 58], ['#fbcdb3', 74], ['#fcbf92', 88], ['#f8ab76', 100]],
           sun: 'rgba(255, 214, 140, .75)', haze: ['rgba(120, 150, 225, .07)', 'rgba(255, 150, 95, .09)'] } },
+      // 朝阳: 落日's mirror. The sun has just risen at the top of the window,
+      // so the sky runs the other way: warm first light up top, cooling down
+      // through rose and lilac into the clear morning blue below. Light = early
+      // morning (fresh, high-key, a gold-and-sky-blue pair), dark = the blue
+      // hour before sunrise (deep navy with the first glow on the top edge).
+      // The top glow sits behind the brand and New Session, so the stops up
+      // there stay soft enough for their text.
+      { id: 'sunrise', label: '朝阳', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        dark: { bg: '#141a2c', side: '#121829', l1: '#1c2338', l2: '#252d45', l3: '#2f3853', ov: '#1d243a', code: '#10162a',
+          text: '#eef0f6', dim: '#b9bfd2', faint: '#7f88a3', accent: '#ffb46b', accent2: '#7fb2ff', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a88',
+          kw: '#ff9ec0', str: '#ffd27a', fn: '#ffb46b', num: '#9cc4ff', type: '#ffe08a', com: '#717b98', punc: '#c8cede',
+          sky: [['#8a5244', 0], ['#6b4256', 10], ['#4b3a62', 24], ['#33335f', 42], ['#242b52', 62], ['#1a2244', 82], ['#131a35', 100]],
+          sun: 'rgba(255, 188, 120, .45)', haze: ['rgba(255, 150, 100, .08)', 'rgba(110, 150, 240, .06)'] },
+        light: { bg: '#fffcf7', side: '#fbf4ec', l1: '#ffffff', l2: '#fdf6ee', l3: '#f6ebe0', ov: '#ffffff', code: '#fbf6ef',
+          text: '#24283a', dim: '#55597a', faint: '#8d90a8', accent: '#d27410', accent2: '#2f78c9', ok: '#2a8a57', warn: '#a86a00', err: '#c9364c',
+          kw: '#c4436a', str: '#a8620c', fn: '#d27410', num: '#2f78c9', type: '#8c6400', com: '#9b9cb0', punc: '#44475c',
+          sky: [['#fde2b4', 0], ['#fcd8bd', 14], ['#f7d6d2', 30], ['#ead8ea', 48], ['#dbdff2', 66], ['#cfe2f4', 84], ['#c4ddf3', 100]],
+          sun: 'rgba(255, 236, 170, .9)', haze: ['rgba(255, 190, 110, .1)', 'rgba(120, 170, 235, .07)'] } },
     ];
+    // the sun sits where its theme says (top for 朝阳), stamped on each variant
+    for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
     for (const t of THEMES) if (!t.swatch) {
       t.swatch = {};
       for (const s of t.schemes) { const v = t[s]; t.swatch[s] = [v.bg, v.accent, v.accent2, v.text]; }
@@ -1978,9 +1999,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
-    function skyGradient(v, alpha) {
+    function skyGradient(v, alpha, sunAt) {
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
-      return `radial-gradient(120% 22% at 50% 102%, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
+      const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
+      return `radial-gradient(120% 22% at ${at}, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
     }
     const rgbHex = (c) => `#${c.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('')}`;
     const mixHex = (a, b, t) => rgbHex(mixRgb(hexRgb(a), hexRgb(b), t));
@@ -2034,7 +2056,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const keep = dark ? 0.5 : 0.55;
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
-      return `radial-gradient(70% 18% at 50% 104%, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
+      return `radial-gradient(70% 18% at 50% ${v.sunTop ? '-4%' : '104%'}, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
     }
     /** Main panel when the sidebar carries the sky too: one sky across both.
      * The full-strength sky runs on from the sidebar's edge (same stops at the
@@ -2048,7 +2070,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const full = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${a}, transparent) ${p}%`).join(', ');
       const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
       return [
-        `radial-gradient(46% 20% at 0% 103%, ${v.sun}, transparent 72%)`,
+        `radial-gradient(46% 20% at 0% ${v.sunTop ? '-3%' : '103%'}, ${v.sun}, transparent 72%)`,
         `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
         `linear-gradient(180deg, ${full})`,
       ].join(', ');
@@ -2304,7 +2326,7 @@ ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !impo
 ${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] { background: ${joinedSkyGradient(v, dark)} !important; }
 ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
-  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)').replace('radial-gradient(120% 22% at 50% 102%', 'radial-gradient(70% 20% at 100% 103%')} !important;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%').replace('radial-gradient(120% 22%', 'radial-gradient(70% 20%')} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
 /* sticky bars over the transcript: only those that stick (an opened row, the
@@ -2340,9 +2362,9 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         `html:root body[data-cm-theme="${t.id}"]${s === 'dark' ? '[data-ds-dark-theme]' : ':not([data-ds-dark-theme])'}`,
         t[s], s === 'dark')).join('\n');
     }
-    /** Where the sky goes by default: 落日 is one sky over the whole window
-     * (sidebar and main panel joined), every other theme starts plain. */
-    const skyDefault = (id) => ({ sb: id === 'sunset', main: id === 'sunset' });
+    /** Where the sky goes by default: 落日 and 朝阳 are one sky over the whole
+     * window (sidebar and main panel joined), every other theme starts plain. */
+    const skyDefault = (id) => ({ sb: id === 'sunset' || id === 'sunrise', main: id === 'sunset' || id === 'sunrise' });
 
     const THEME_KEY = 'hanmo:theme';
     const MODES = ['light', 'dark', 'system'];
