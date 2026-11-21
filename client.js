@@ -1132,7 +1132,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.2.0'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.2.1'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -2033,6 +2033,23 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
       return `radial-gradient(70% 18% at 50% 104%, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
     }
+    /** Main panel when the sidebar carries the sky too: one sky across both.
+     * The full-strength sky runs on from the sidebar's edge (same stops at the
+     * same heights, so the colours meet with no seam), and a veil of the page
+     * colour rises over it across the first ~40% of the panel to the reading
+     * strength of mainSkyGradient. The sun sits on the seam, half in each
+     * column, so the glow reads as one sun low over a single horizon. */
+    function joinedSkyGradient(v, dark) {
+      const keep = dark ? 0.5 : 0.55;
+      const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
+      const full = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${a}, transparent) ${p}%`).join(', ');
+      const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
+      return [
+        `radial-gradient(46% 20% at 0% 103%, ${v.sun}, transparent 72%)`,
+        `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
+        `linear-gradient(180deg, ${full})`,
+      ].join(', ');
+    }
     const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
     const mixRgb = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
     /** Comet colour stops for one theme variant, in beamDots' format. */
@@ -2277,6 +2294,15 @@ ${MN} ${F} [class*="_centerCol"] {
   background: ${mainSkyGradient(v, dark)} !important;
 }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
+/* both on: one sky across the window. The main panel continues the sidebar's
+ * sky at full strength from the shared edge and veils it toward the reading
+ * strength; the sidebar's sun moves onto the seam to meet the main panel's
+ * half, and the hairline between the columns goes. */
+${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] { background: ${joinedSkyGradient(v, dark)} !important; }
+${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
+  border-right-color: transparent !important;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)').replace('radial-gradient(120% 22% at 50% 102%', 'radial-gradient(70% 20% at 100% 103%')} !important;
+}
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
 /* sticky bars over the transcript: frosted page, so text sliding under stays quiet */
 ${MN} ${F} [class*="_centerCol"] :is([class*="_compactionButton"], [data-disclosure-header]) {
@@ -2301,9 +2327,9 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         `html:root body[data-cm-theme="${t.id}"]${s === 'dark' ? '[data-ds-dark-theme]' : ':not([data-ds-dark-theme])'}`,
         t[s], s === 'dark')).join('\n');
     }
-    /** Where the sky goes by default: 落日 paints its sidebar (how it looked
-     * when it shipped), every other theme starts plain. */
-    const skyDefault = (id) => ({ sb: id === 'sunset', main: false });
+    /** Where the sky goes by default: 落日 is one sky over the whole window
+     * (sidebar and main panel joined), every other theme starts plain. */
+    const skyDefault = (id) => ({ sb: id === 'sunset', main: id === 'sunset' });
 
     const THEME_KEY = 'hanmo:theme';
     const MODES = ['light', 'dark', 'system'];
@@ -2327,6 +2353,12 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         const t0 = byId(s.id);
         if (t0 && !t0.schemes.includes(s.mode)) s.mode = t0.schemes[0];
         if (!s.inks || typeof s.inks !== 'object') s.inks = {};
+        // v1.2.1: 落日 became one sky over sidebar and main panel; a sunset
+        // choice saved before that (sidebar only, from 1.2.0) gives way once
+        if ((s.skyV || 0) < 2) {
+          if (s.skies && s.skies.sunset) { s.skies = { ...s.skies }; delete s.skies.sunset; }
+          s.skyV = 2;
+        }
         return s;
       };
       let state = read();
@@ -4013,33 +4045,34 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 /* session stats under the composer (「N 轮 N 步」「tok/s」…): DSH draws them in
    label-tertiary, too faint. Mix from label-primary so every palette and both
    themes stay legible without per-palette values. */
-body:not([data-hanmo-native]) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 82%,transparent)}
+body:not([data-hanmo-native]) :is([data-composer-stat] [class*="_pill"]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 82%,transparent)}
 body:not([data-hanmo-native]) :is([data-composer-stat] button[class*="_pill"]:hover,[data-composer-stat] button[class*="_pill"][aria-expanded=true]){color:var(--dsw-alias-label-primary)}
-body:not([data-hanmo-native]) :is(.bOPqQW_sep,[data-composer-stat]~[class*="_sep"]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 45%,transparent)}
-body:not([data-hanmo-native]) .JObwrW_trigger:not(:hover):not([aria-expanded=true]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 82%,transparent)}
+body:not([data-hanmo-native]) :is([data-composer-stat]~[class*="_sep"]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 45%,transparent)}
+body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"] > button[aria-haspopup="dialog"]:has(> svg circle):not(:hover):not([aria-expanded=true]){color:color-mix(in srgb,var(--dsw-alias-label-primary) 82%,transparent)}
 /* the stats float over the file body, which now runs under the composer: back
    each pill and dot with a near-opaque chip of the page colour so the text stays
    readable over code. The spread shadow widens the chip without moving layout.
    Glass mode empties bg-base inside the frame, so read the colour captured on
    <body> (--cm-base) first. */
 /* the context-usage ring + percent at the far right is a separate component
-   (ContextMeter, hashed JObwrW_); back its wrapper so the trigger's own hover
+   (ContextMeter; its hashed class prefix differs per DSH build, e.g. JObwrW_ in
+   the web build and _01Njla_ in DSH NEXT, so it is matched by its shape); back its wrapper so the trigger's own hover
    fill still shows on top. Under the DeepSeek Harness theme only while a file
    is open, the one case the chips are needed for. */
-body:not([data-hanmo-native]) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"]),
-[data-conversation-scroll]:has(.mf-root) :is([data-composer-stat] .bOPqQW_pill,[data-composer-stat] [class*="_pill"],.bOPqQW_sep,[data-composer-stat]~[class*="_sep"]){
+body:not([data-hanmo-native]) :is([data-composer-stat] [class*="_pill"],[data-composer-stat]~[class*="_sep"]),
+[data-conversation-scroll]:has(.mf-root) :is([data-composer-stat] [class*="_pill"],[data-composer-stat]~[class*="_sep"]){
   --mf-stat-bg:color-mix(in srgb,var(--cm-base,var(--dsw-alias-bg-base)) 92%,transparent);
   background:var(--mf-stat-bg);box-shadow:0 0 0 3px var(--mf-stat-bg);border-radius:6px;
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
-/* the meter's tooltip is a position:fixed child of .JObwrW_root. A
+/* the meter's tooltip is a position:fixed child of [data-composer-dock] [class*="_root"]:has(> button[aria-haspopup="dialog"] > svg circle). A
    backdrop-filter on the root would make it the tooltip's containing block:
    the viewport coordinates then land far outside the page, the scroll area
    grows, the view jumps, hover is lost and the tooltip hides, in a loop (the
    whole page flickers). So the chip and its blur live on ::before instead. */
-body:not([data-hanmo-native]) .JObwrW_root,
-[data-conversation-scroll]:has(.mf-root) .JObwrW_root{position:relative;isolation:isolate}
-body:not([data-hanmo-native]) .JObwrW_root::before,
-[data-conversation-scroll]:has(.mf-root) .JObwrW_root::before{
+body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button[aria-haspopup="dialog"] > svg circle),
+[data-conversation-scroll]:has(.mf-root) [data-composer-dock] [class*="_root"]:has(> button[aria-haspopup="dialog"] > svg circle){position:relative;isolation:isolate}
+body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button[aria-haspopup="dialog"] > svg circle)::before,
+[data-conversation-scroll]:has(.mf-root) [data-composer-dock] [class*="_root"]:has(> button[aria-haspopup="dialog"] > svg circle)::before{
   content:"";position:absolute;inset:-3px;z-index:-1;border-radius:9px;pointer-events:none;
   background:color-mix(in srgb,var(--cm-base,var(--dsw-alias-bg-base)) 92%,transparent);
   -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
