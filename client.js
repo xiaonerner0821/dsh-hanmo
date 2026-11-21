@@ -1956,7 +1956,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#eef0f6', dim: '#b9bfd2', faint: '#7f88a3', accent: '#ffb46b', accent2: '#7fb2ff', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a88',
           kw: '#ff9ec0', str: '#ffd27a', fn: '#ffb46b', num: '#9cc4ff', type: '#ffe08a', com: '#717b98', punc: '#c8cede',
           sky: [['#9a5a46', 0], ['#82495a', 13], ['#644268', 28], ['#473b69', 44], ['#2f3261', 62], ['#1f2749', 81], ['#141b37', 100]],
-          sun: 'rgba(255, 184, 116, .5)', sunScale: 1.8, haze: ['rgba(255, 150, 100, .1)', 'rgba(110, 150, 240, .06)'] },
+          sun: 'rgba(255, 184, 116, .5)', sunFar: true, haze: ['rgba(255, 150, 100, .1)', 'rgba(110, 150, 240, .06)'] },
         light: { bg: '#fffcf7', side: '#fbf4ec', l1: '#ffffff', l2: '#fdf6ee', l3: '#f6ebe0', ov: '#ffffff', code: '#fbf6ef',
           text: '#24283a', dim: '#55597a', faint: '#8d90a8', accent: '#d27410', accent2: '#2f78c9', ok: '#2a8a57', warn: '#a86a00', err: '#c9364c',
           kw: '#c4436a', str: '#a8620c', fn: '#d27410', num: '#2f78c9', type: '#8c6400', com: '#9b9cb0', punc: '#44475c',
@@ -1999,10 +1999,25 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
-    function skyGradient(v, alpha, sunAt, size) {
+    function skyGradient(v, alpha, sunAt, size, reach) {
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
-      return `radial-gradient(${sunSize(v, size || [120, 22])} at ${at}, ${v.sun}, transparent 70%), linear-gradient(180deg, ${stops})`;
+      return `${sunGlow(v, at, sunSize(v, size || [120, 22]), { reach })}, linear-gradient(180deg, ${stops})`;
+    }
+    const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
+    /** Radius that reaches every corner of the window from any point in it:
+     * used when sidebar and main panel share one sun, so both columns run the
+     * same falloff and meet without a seam. */
+    const JOIN_REACH = 'calc(max(100vw, 100vh) * 1.42)';
+    /** The sun's glow. Normally a compact ellipse; a variant with sunFar
+     * (朝阳 dark) lights the whole sky instead: one continuous falloff from
+     * the sun out to the farthest corner of its column (or of the window,
+     * `reach`, when the two columns share the sun), eased so it never shows
+     * a rim. */
+    function sunGlow(v, at, size, { k = 1, fade = 70, reach } = {}) {
+      if (!v.sunFar) return `radial-gradient(${size} at ${at}, ${scaleA(v.sun, k)}, transparent ${fade}%)`;
+      const ramp = [[1, 0], [0.74, 10], [0.5, 25], [0.31, 43], [0.17, 62], [0.07, 81], [0, 100]];
+      return `radial-gradient(circle ${reach || 'farthest-corner'} at ${at}, ${ramp.map(([a, p]) => `${scaleA(v.sun, k * a)} ${p}%`).join(', ')})`;
     }
     /** A sun glow's ellipse, widened and deepened by the variant's sunScale
      * (朝阳's dark first light spreads further down the sky). */
@@ -2062,7 +2077,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const keep = dark ? 0.5 : 0.55;
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
       const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
-      return `radial-gradient(${sunSize(v, [70, 18])} at 50% ${v.sunTop ? '-4%' : '104%'}, ${v.sun.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * 0.6).toFixed(2)})`)}, transparent 72%), linear-gradient(180deg, ${stops})`;
+      return `${sunGlow(v, `50% ${v.sunTop ? '-4%' : '104%'}`, sunSize(v, [70, 18]), { k: 0.6, fade: 72 })}, linear-gradient(180deg, ${stops})`;
     }
     /** Main panel when the sidebar carries the sky too: one sky across both.
      * The full-strength sky runs on from the sidebar's edge (same stops at the
@@ -2076,7 +2091,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const full = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${a}, transparent) ${p}%`).join(', ');
       const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
       return [
-        `radial-gradient(${sunSize(v, [46, 20])} at 0% ${v.sunTop ? '-3%' : '103%'}, ${v.sun}, transparent 72%)`,
+        sunGlow(v, `0% ${v.sunTop ? '-3%' : '103%'}`, sunSize(v, [46, 20]), { fade: 72, reach: JOIN_REACH }),
         `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
         `linear-gradient(180deg, ${full})`,
       ].join(', ');
@@ -2332,7 +2347,7 @@ ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !impo
 ${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] { background: ${joinedSkyGradient(v, dark)} !important; }
 ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
-  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%', [70, 20])} !important;
+  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%', [70, 20], JOIN_REACH)} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
 /* sticky bars over the transcript: only those that stick (an opened row, the
