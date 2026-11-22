@@ -2596,6 +2596,15 @@ ${SB} ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
   -webkit-backdrop-filter: blur(8px) saturate(1.2); backdrop-filter: blur(8px) saturate(1.2);
 }
 ${SB} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
+/* the small grey labels in the session list (age on the right, the meta line)
+ * are DSH's tertiary grey at 10-12px, which washes out over a sky and the
+ * bubbles in it: give them the theme's ink at 78% with a faint halo of the
+ * sidebar tone behind each glyph, and a touch more weight */
+${SB} ${S} :is([class*="_time"], [class*="_meta"]) {
+  color: color-mix(in srgb, ${v.text} 78%, transparent);
+  font-weight: 500;
+  text-shadow: 0 0 4px ${m(v.side, 85)}, 0 0 1px ${m(v.side, 90)};
+}
 
 ${MN} ${F} [class*="_centerCol"] {
   --dsw-alias-bg-base: transparent;
@@ -2808,6 +2817,10 @@ body[data-cm-wp="all"]:not([data-hanmo-native]) ${S} :is(${PANEL_ROW}, [class*="
   -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
 }
 body[data-cm-wp="all"]:not([data-hanmo-native]) ${S} ${PANEL_ROW}:hover { background: color-mix(in srgb, var(--cm-wp-page) 80%, transparent); }
+body[data-cm-wp="all"]:not([data-hanmo-native]) ${S} :is([class*="_time"], [class*="_meta"]) {
+  color: color-mix(in srgb, var(--dsw-alias-label-primary) 80%, transparent); font-weight: 500;
+  text-shadow: 0 0 4px color-mix(in srgb, var(--cm-wp-page) 85%, transparent), 0 0 1px var(--cm-wp-page);
+}
 body[data-cm-wp]:not([data-hanmo-native]) ${F} :is([class*="_sidebarCol"], [class*="_centerCol"]) :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover]) {
   --dsw-specific-sidebar-fill: var(--cm-wp-page); --dsw-alias-bg-base: var(--cm-wp-page);
 }
