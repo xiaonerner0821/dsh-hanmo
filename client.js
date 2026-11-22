@@ -2283,7 +2283,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * read, a softer sun low behind the composer, and the panel opacity
      * setting carried by every stop. */
     function mainSkyGradient(v, dark) {
-      const keep = dark ? 0.5 : 0.55;
+      const keep = READ_KEEP(dark);
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
       const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
       const at = `50% ${v.sunTop ? '-4%' : '104%'}`;
@@ -2294,7 +2294,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * page while sidebar and main panel share one sky. Both columns take it,
      * so the picture stays continuous across the seam (a veil on only the
      * main panel made its shafts look cut off at the border). */
-    const READ_KEEP = (dark) => (dark ? 0.5 : 0.55);
+    const READ_KEEP = (dark) => (dark ? 0.64 : 0.55);
     /** One sky across the window: the same stops at the same heights in both
      * columns, and the sun on the seam (half in each) with a radius that
      * reaches the farthest corner, so the glow runs on unbroken. */
@@ -2304,8 +2304,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
       return [
         ...waveLayers(v, 1),
-        sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH }),
-        ...seaDepth(v, list, sunAt, 0.85),
+        sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH, k: dark ? 0.72 : 1 }),
+        ...seaDepth(v, list, sunAt, dark ? 0.62 : 0.85),
         baseLayer(list),
       ].join(', ');
     }
