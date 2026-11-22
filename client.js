@@ -1962,24 +1962,28 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           kw: '#c4436a', str: '#a8620c', fn: '#d27410', num: '#2f78c9', type: '#8c6400', com: '#9b9cb0', punc: '#44475c',
           sky: [['#fde2b4', 0], ['#fcd8bd', 14], ['#f7d6d2', 30], ['#ead8ea', 48], ['#dbdff2', 66], ['#cfe2f4', 84], ['#c4ddf3', 100]],
           sun: 'rgba(255, 236, 170, .9)', haze: ['rgba(255, 190, 110, .1)', 'rgba(120, 170, 235, .07)'] } },
-      // 海浪: looking down into the sea. The light comes from the surface at
-      // the top (a pale sun shimmer on foam-white water) and the column
-      // deepens downward through aqua and turquoise into open-water blue.
-      // Light = a clear noon sea, kept pale enough for dark text at the
-      // bottom; dark = the sea at night, a faint bioluminescent sheen on the
-      // surface over deep navy. Teal accent, deep-water blue second accent.
+      // 海浪: the sea. Light = a sunlit tropical sea seen from above: white
+      // surf at the top giving way to clear turquoise, then aquamarine and
+      // a bright cerulean (stopping short of navy so dark text still reads).
+      // Dark = under the surface, looking up: sunlight breaks in at the top
+      // and fans down in soft shafts, the water deepening from sunlit teal to
+      // abyssal blue. Both carry a faint layer of wave lines.
       { id: 'ocean', label: '海浪', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
         fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
         dark: { bg: '#0d1c29', side: '#0b1824', l1: '#132636', l2: '#1a3142', l3: '#223c4f', ov: '#142838', code: '#0a1722',
           text: '#e4f1f4', dim: '#a9c3cc', faint: '#6f8c98', accent: '#4fd1c5', accent2: '#6aa8ff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4fd1c5', num: '#c7a6ff', type: '#f2d28a', com: '#5f7d89', punc: '#bcd0d7',
-          sky: [['#1f5663', 0], ['#19475a', 12], ['#14394f', 28], ['#102d44', 48], ['#0d2439', 70], ['#0a1b2e', 100]],
-          sun: 'rgba(110, 232, 220, .3)', haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
+          sky: [['#2a7f8c', 0], ['#1f6878', 9], ['#18556b', 22], ['#12445c', 40], ['#0e3449', 60], ['#0a2638', 80], ['#071a29', 100]],
+          sun: 'rgba(176, 244, 236, .42)', sunFar: true, rays: 'rgba(196, 248, 242, .2)',
+          waves: { kind: 'lines', color: '#a8f0ea', a: 0.13 },
+          haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
-          sky: [['#eef9f8', 0], ['#d6f1f1', 14], ['#bce8eb', 32], ['#a3dbe4', 52], ['#8fcde0', 72], ['#80bdd9', 88], ['#76b0d4', 100]],
-          sun: 'rgba(255, 255, 238, .9)', haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
+          sky: [['#eefaf8', 0], ['#c8f0ea', 9], ['#9ee2dc', 22], ['#74d0d4', 40], ['#58bdcd', 60], ['#47afc8', 80], ['#3fa6c4', 100]],
+          sun: 'rgba(255, 255, 242, .85)', rays: 'rgba(255, 255, 246, .28)',
+          waves: { kind: 'lines', color: '#ffffff', a: 0.42 },
+          haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
       // in a clear sky, the turquoise sea, a thin white line of breaking foam,
       // then warm sand. The foam is a narrow bright band so the bands read as
@@ -1992,11 +1996,13 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#f0ece4', dim: '#c0bab0', faint: '#878f96', accent: '#48d1d9', accent2: '#ffb35c', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a80',
           kw: '#ff9a7a', str: '#8fe3c4', fn: '#48d1d9', num: '#ffb35c', type: '#ffe08a', com: '#6c757d', punc: '#cdd3d8',
           sky: [['#1b2b4b', 0], ['#1d3554', 20], ['#184a5a', 40], ['#13404f', 54], ['#3a6a70', 60], ['#2d5359', 63], ['#463f33', 70], ['#3a3329', 100]],
+          waves: { kind: 'foam', color: '#d6eee8', a: 0.32, at: 57 },
           sun: 'rgba(255, 236, 190, .3)', haze: ['rgba(150, 180, 255, .06)', 'rgba(220, 190, 130, .06)'] },
         light: { bg: '#fffbf3', side: '#f8efdc', l1: '#ffffff', l2: '#fbf4e6', l3: '#f2e6cc', ov: '#ffffff', code: '#fbf5ea',
           text: '#23303a', dim: '#556470', faint: '#8e9aa2', accent: '#0a8fa3', accent2: '#e07a2f', ok: '#2b8a52', warn: '#b06e00', err: '#c83a42',
           kw: '#d4583f', str: '#2b8a6a', fn: '#0a8fa3', num: '#e07a2f', type: '#a46b00', com: '#9aa1a3', punc: '#3e4a52',
           sky: [['#bfe2f6', 0], ['#d8eff8', 20], ['#a6e0e3', 40], ['#84d0d5', 54], ['#eefaf6', 60], ['#cdeee6', 63], ['#f5e7c9', 69], ['#eed8aa', 100]],
+          waves: { kind: 'foam', color: '#ffffff', a: 0.85, at: 57 },
           sun: 'rgba(255, 238, 160, .95)', haze: ['rgba(255, 230, 150, .1)', 'rgba(240, 200, 130, .08)'] } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
@@ -2036,9 +2042,52 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
     function skyGradient(v, alpha, sunAt, size, reach) {
-      const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${alpha}, transparent) ${p}%`).join(', ');
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${c} ${alpha}, transparent)`, p]);
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
-      return `${sunGlow(v, at, sunSize(v, size || [120, 22]), { reach })}, linear-gradient(180deg, ${stops})`;
+      return [...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
+        ...seaDepth(v, list, at, 1), baseLayer(list)].join(', ');
+    }
+    const baseLayer = (list) => `linear-gradient(180deg, ${list.map(([c, p]) => `${c} ${p}%`).join(', ')})`;
+    const svgUrl = (s) => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
+    /** Sunlight shafts of a sea theme (v.rays): a fan of soft rays from the
+     * surface at `at`, fixed widths so the fan looks natural but never moves.
+     * Over them sits a copy of the base gradient that turns opaque with
+     * depth, so the shafts fade out as the water deepens instead of ending
+     * on an edge. */
+    function seaDepth(v, list, at, k) {
+      if (!v.rays) return [];
+      const z = scaleA(v.rays, 0);
+      const fan = [[138, 2.2, .5], [146, 3.4, .9], [153, 1.6, .6], [161, 4.2, 1], [170, 2.4, .7], [176, 3.4, 1],
+        [186, 2.8, .8], [193, 4, 1], [202, 1.8, .6], [209, 3.6, .9], [218, 2.4, .5]];
+      const stops = [`${z} 0deg`];
+      for (const [c, w, s] of fan) stops.push(`${z} ${c - w}deg`, `${scaleA(v.rays, k * s)} ${c}deg`, `${z} ${c + w}deg`);
+      stops.push(`${z} 360deg`);
+      const depth = (p) => (p <= 8 ? 0 : p >= 80 ? 100 : Math.round(((p - 8) / 72) ** 1.15 * 100));
+      return [
+        `linear-gradient(180deg, ${list.map(([c, p]) => `color-mix(in srgb, ${c} ${depth(p)}%, transparent) ${p}%`).join(', ')})`,
+        `conic-gradient(from 0deg at ${at}, ${stops.join(', ')})`,
+      ];
+    }
+    /** The wave texture of a sea theme (v.waves), as background layers:
+     * 'lines' = two rows of gentle swell lines repeated over the column;
+     * 'foam' = the scalloped edge of breaking surf at v.waves.at (% height)
+     * and a fainter wash just below it, repeated across. `k` scales the
+     * strength (softer on the main panel, where text sits on it). */
+    function waveLayers(v, k) {
+      const w = v.waves;
+      if (!w) return [];
+      const op = (x) => Math.min(1, x * k).toFixed(3);
+      if (w.kind === 'lines') {
+        const s = `<svg xmlns='http://www.w3.org/2000/svg' width='240' height='72'><g fill='none' stroke='${w.color}' stroke-linecap='round'>`
+          + `<path stroke-opacity='${op(w.a)}' stroke-width='1.4' d='M0 18 Q30 9 60 18 T120 18 T180 18 T240 18'/>`
+          + `<path stroke-opacity='${op(w.a * 0.6)}' stroke-width='1' d='M-60 54 Q-30 45 0 54 T60 54 T120 54 T180 54 T240 54 T300 54'/></g></svg>`;
+        return [`${svgUrl(s)} 0 0 / 240px 72px repeat`];
+      }
+      const row = (x, y, a, hgt) => {
+        const s = `<svg xmlns='http://www.w3.org/2000/svg' width='96' height='${hgt}'><path fill='${w.color}' fill-opacity='${op(a)}' d='M0 7 Q12 0 24 7 T48 7 T72 7 T96 7 V${hgt} H0 Z'/></svg>`;
+        return `${svgUrl(s)} ${x}px ${y}% / 96px ${hgt}px repeat-x`;
+      };
+      return [row(0, w.at, w.a, 12), row(48, w.at + 7, w.a * 0.5, 9)];
     }
     const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
     /** Radius that reaches every corner of the window from any point in it:
@@ -2112,8 +2161,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function mainSkyGradient(v, dark) {
       const keep = dark ? 0.5 : 0.55;
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
-      const stops = v.sky.map(([c, p]) => `color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent) ${p}%`).join(', ');
-      return `${sunGlow(v, `50% ${v.sunTop ? '-4%' : '104%'}`, sunSize(v, [70, 18]), { k: 0.6, fade: 72 })}, linear-gradient(180deg, ${stops})`;
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
+      const at = `50% ${v.sunTop ? '-4%' : '104%'}`;
+      return [...waveLayers(v, 0.5), sunGlow(v, at, sunSize(v, [70, 18]), { k: 0.6, fade: 72 }),
+        ...seaDepth(v, list, at, 0.55), baseLayer(list)].join(', ');
     }
     /** Main panel when the sidebar carries the sky too: one sky across both.
      * The full-strength sky runs on from the sidebar's edge (same stops at the
@@ -2124,12 +2175,15 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function joinedSkyGradient(v, dark) {
       const keep = dark ? 0.5 : 0.55;
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
-      const full = v.sky.map(([c, p]) => `color-mix(in srgb, ${c} ${a}, transparent) ${p}%`).join(', ');
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${c} ${a}, transparent)`, p]);
       const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
+      const at = `0% ${v.sunTop ? '-3%' : '103%'}`;
       return [
-        sunGlow(v, `0% ${v.sunTop ? '-3%' : '103%'}`, sunSize(v, [46, 20]), { fade: 72, reach: JOIN_REACH }),
+        ...waveLayers(v, 0.6),
+        sunGlow(v, at, sunSize(v, [46, 20]), { fade: 72, reach: JOIN_REACH }),
         `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
-        `linear-gradient(180deg, ${full})`,
+        ...seaDepth(v, list, at, 1),
+        baseLayer(list),
       ].join(', ');
     }
     const hexRgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -2324,8 +2378,8 @@ ${B} ${S} ${NEW_SESSION} svg { filter: drop-shadow(0 0 4px ${m(v.accent, 60)}); 
      * panel (left out once the main panel carries the sky itself). */
     function sunsetCss(B, v, dark, m) {
       return `
-${B}:not([data-cm-sky-main]) ${F} [class*="_centerCol"] { position: relative; }
-${B}:not([data-cm-sky-main]) ${F} [class*="_centerCol"]::after {
+${B}:not([data-cm-sky-main]):not([data-cm-wp]) ${F} [class*="_centerCol"] { position: relative; }
+${B}:not([data-cm-sky-main]):not([data-cm-wp]) ${F} [class*="_centerCol"]::after {
   content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
   background: linear-gradient(180deg, ${v.haze[0]}, transparent 38%, transparent 62%, ${v.haze[1]});
 }
@@ -2439,6 +2493,186 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach']);
     const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
 
+    const WP_KEY = 'hanmo:wallpaper';
+    const WP_DEFAULT = { on: true, scope: 'main', veil: 55 };
+    /** The user's own wallpaper. The picture is scaled down (long edge
+     * <= 2560px, JPEG) and kept as a Blob in IndexedDB, so a large photo
+     * neither fills localStorage nor slows the page; the settings
+     * ({ on, scope: main|all, veil 0-90 }) live in localStorage. Applied as
+     * body[data-cm-wp=main|all] plus --cm-wp (an object URL) and
+     * --cm-wp-veil; WALLPAPER_CSS paints it. Under DeepSeek Harness (native)
+     * it stays off, like every other hanmo layer. `onChange` lets the theme
+     * store drop the sky where the wallpaper now covers. */
+    function wallpaperStore(onChange) {
+      const listeners = new Set();
+      let state;
+      try { state = { ...WP_DEFAULT, ...JSON.parse(localStorage.getItem(WP_KEY) || '{}') }; } catch { state = { ...WP_DEFAULT }; }
+      let url = null;
+      let snap = { ...state, url };
+      const db = () => new Promise((resolve, reject) => {
+        const r = indexedDB.open('hanmo', 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('files');
+        r.onsuccess = () => resolve(r.result);
+        r.onerror = () => reject(r.error);
+      });
+      const run = async (mode, fn) => {
+        const d = await db();
+        return new Promise((resolve, reject) => {
+          const tx = d.transaction('files', mode);
+          const req = fn(tx.objectStore('files'));
+          tx.oncomplete = () => { d.close(); resolve(req ? req.result : undefined); };
+          tx.onerror = tx.onabort = () => { d.close(); reject(tx.error); };
+        });
+      };
+      const notify = () => { snap = { ...state, url }; for (const fn of listeners) fn(); };
+      const apply = () => {
+        const b = document.body;
+        if (state.on && url && !b.hasAttribute(NATIVE_ATTR)) {
+          b.setAttribute('data-cm-wp', state.scope === 'all' ? 'all' : 'main');
+          b.style.setProperty('--cm-wp', `url("${url}")`);
+          b.style.setProperty('--cm-wp-veil', String(state.veil / 100));
+        } else {
+          b.removeAttribute('data-cm-wp');
+          b.style.removeProperty('--cm-wp');
+          b.style.removeProperty('--cm-wp-veil');
+        }
+        if (onChange) onChange();
+      };
+      const setUrl = (blob) => {
+        if (url) URL.revokeObjectURL(url);
+        url = blob ? URL.createObjectURL(blob) : null;
+      };
+      const shrink = async (file) => {
+        const bmp = await createImageBitmap(file);
+        const k = Math.min(1, 2560 / Math.max(bmp.width, bmp.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
+        c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+        bmp.close?.();
+        return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('encode'))), 'image/jpeg', 0.88));
+      };
+      return {
+        get: () => snap,
+        subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
+        set(patch) {
+          state = { ...state, ...patch };
+          state.veil = Math.min(90, Math.max(0, Math.round(Number(state.veil) || 0)));
+          try { localStorage.setItem(WP_KEY, JSON.stringify(state)); } catch { /* private mode */ }
+          apply(); notify();
+        },
+        async setImage(file) {
+          const blob = await shrink(file);
+          await run('readwrite', (s) => s.put(blob, 'wallpaper'));
+          setUrl(blob);
+          this.set({ on: true });
+        },
+        async clearImage() {
+          try { await run('readwrite', (s) => s.delete('wallpaper')); } catch { /* nothing stored */ }
+          setUrl(null);
+          apply(); notify();
+        },
+        async load() {
+          try {
+            const blob = await run('readonly', (s) => s.get('wallpaper'));
+            if (blob instanceof Blob) { setUrl(blob); apply(); notify(); }
+          } catch { /* no IndexedDB: no wallpaper */ }
+        },
+        apply,
+        clear() {
+          document.body.removeAttribute('data-cm-wp');
+          document.body.style.removeProperty('--cm-wp');
+          document.body.style.removeProperty('--cm-wp-veil');
+          setUrl(null);
+        },
+      };
+    }
+    /* the wallpaper. --cm-wp-page is the page colour resolved on <body>, before
+     * the columns empty their own page token, so the veil can still use it.
+     * main: the picture fills the main panel. all: both columns paint it fixed
+     * to the viewport, so one picture spans the window.
+     * A veil of the page colour over it (遮罩) keeps text readable; the
+     * sidebar tiles, sticky bars and user bubbles become frosted glass, and
+     * popups / the file view keep a solid page. */
+    const WALLPAPER_CSS = `
+body[data-cm-wp] { --cm-wp-page: var(--dsw-alias-bg-base); --cm-wp-veil-c: color-mix(in srgb, var(--cm-wp-page) calc(var(--cm-wp-veil, .55) * 100%), transparent); }
+html:root body[data-cm-wp="main"]:not([data-hanmo-native]) ${F} [class*="_centerCol"] {
+  background: linear-gradient(var(--cm-wp-veil-c), var(--cm-wp-veil-c)), var(--cm-wp) center / cover no-repeat !important;
+}
+html:root body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] {
+  --dsw-alias-bg-base: transparent;
+  --dsw-linear-gradient-think: linear-gradient(180deg, transparent, transparent);
+}
+/* all: each column paints its share of one window-sized picture (fixed to
+ * the viewport), so the two halves line up into a single image */
+html:root body[data-cm-wp="all"]:not([data-hanmo-native]) ${F} :is([class*="_sidebarCol"], [class*="_centerCol"]) {
+  background: linear-gradient(var(--cm-wp-veil-c), var(--cm-wp-veil-c)) fixed, var(--cm-wp) center / cover no-repeat fixed !important;
+}
+html:root body[data-cm-wp="all"]:not([data-hanmo-native]) ${F} [class*="_sidebarCol"] {
+  --dsw-specific-sidebar-fill: transparent; border-right-color: transparent !important;
+}
+body[data-cm-wp][data-cm-glass] ${F} :is([class*="_sidebarCol"], [class*="_centerCol"])::before { background: none !important; }
+body[data-cm-wp="all"]:not([data-hanmo-native]) ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
+  background: color-mix(in srgb, var(--cm-wp-page) 62%, transparent);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+}
+body[data-cm-wp="all"]:not([data-hanmo-native]) ${S} ${PANEL_ROW}:hover { background: color-mix(in srgb, var(--cm-wp-page) 80%, transparent); }
+body[data-cm-wp]:not([data-hanmo-native]) ${F} :is([class*="_sidebarCol"], [class*="_centerCol"]) :is([role="menu"], [role="listbox"], [role="dialog"], [role="tooltip"], [popover]) {
+  --dsw-specific-sidebar-fill: var(--cm-wp-page); --dsw-alias-bg-base: var(--cm-wp-page);
+}
+body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] .mf-root { --dsw-alias-bg-base: var(--cm-wp-page); background: var(--cm-wp-page); }
+body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] [class*="_composerSeat"] { background: none !important; }
+body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] :is([data-disclosure-header], [class*="_compactionButton"]) { background: none; }
+body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] :is([class*="_compactionRow"]:has([class*="_compactionBody"]) [class*="_compactionButton"], [data-open] > [data-disclosure-header]) {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cm-wp-page) 80%, transparent) 18px, color-mix(in srgb, var(--cm-wp-page) 80%, transparent) calc(100% - 18px), transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15);
+}
+body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] {
+  background: color-mix(in srgb, var(--cm-accent, #3b82f6) 12%, color-mix(in srgb, var(--cm-wp-page) 74%, transparent));
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+`;
+    /** 壁纸: thumbnail + pick / change / remove / on-off, then scope and veil. */
+    function WallpaperControls({ wallpaper }) {
+      const st = React.useSyncExternalStore(wallpaper.subscribe, wallpaper.get);
+      const input = React.useRef(null);
+      const [busy, setBusy] = React.useState(false);
+      const [err, setErr] = React.useState('');
+      const pick = async (e) => {
+        const f = e.target.files && e.target.files[0];
+        e.target.value = '';
+        if (!f) return;
+        setBusy(true); setErr('');
+        try { await wallpaper.setImage(f); } catch { setErr('无法读取这张图片，请换一张 JPG / PNG / WebP 图片。'); } finally { setBusy(false); }
+      };
+      const btn = (label, onClick, extra) => h('button', { type: 'button', className: 'cm-ap-wp-btn', onClick, ...extra }, label);
+      return h('div', { className: 'cm-ap-wp' },
+        h('div', { className: 'cm-ap-wp-row' },
+          h('button', {
+            type: 'button', className: 'cm-ap-wp-thumb', 'data-empty': st.url ? undefined : '', disabled: busy,
+            title: st.url ? '更换壁纸' : '选择一张图片作为壁纸', 'aria-label': st.url ? '更换壁纸' : '选择壁纸图片',
+            style: st.url ? { backgroundImage: `url("${st.url}")` } : undefined,
+            onClick: () => input.current && input.current.click(),
+          }, st.url ? null : h('span', null, busy ? '处理中…' : '＋ 选择图片')),
+          h('div', { className: 'cm-ap-wp-acts' },
+            st.url ? btn(busy ? '处理中…' : '更换', () => input.current && input.current.click(), { disabled: busy }) : null,
+            st.url ? btn(st.on ? '已启用' : '已停用', () => wallpaper.set({ on: !st.on }), { role: 'switch', 'aria-checked': String(st.on), 'data-on': st.on ? '' : undefined }) : null,
+            st.url ? btn('移除', () => wallpaper.clearImage()) : h('small', null, '图片只保存在这个浏览器里')),
+          h('input', { ref: input, type: 'file', accept: 'image/*', hidden: true, onChange: pick })),
+        err ? h('p', { className: 'cm-ap-wp-err', role: 'alert' }, err) : null,
+        st.url ? h('div', { className: 'cm-ap-seg cm-ap-seg-2', role: 'radiogroup', 'aria-label': '壁纸范围' },
+          [['main', '仅主面板'], ['all', '侧边栏和主面板']].map(([id, label]) => h('button', {
+            key: id, type: 'button', role: 'radio', 'aria-checked': String(st.scope === id), disabled: !st.on,
+            onClick: () => wallpaper.set({ scope: id }),
+          }, label))) : null,
+        st.url ? h('label', { className: 'cm-ap-range' },
+          h('span', null, '遮罩'),
+          h('input', {
+            type: 'range', min: 0, max: 90, step: 1, value: st.veil, disabled: !st.on, 'aria-label': '壁纸遮罩浓度',
+            onChange: (e) => wallpaper.set({ veil: Number(e.target.value) }),
+          }),
+          h('output', null, `${st.veil}%`)) : null);
+    }
+
     const THEME_KEY = 'hanmo:theme';
     const MODES = ['light', 'dark', 'system'];
     /** Persisted colour theme.
@@ -2494,8 +2728,10 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         sheet.textContent = cache.get(key);
         // where this theme's sky goes (each theme remembers its own choice)
         const sky = skyOf_(key);
-        document.body.toggleAttribute('data-cm-sky-sb', !!(t && t.id !== DSH_ID && sky.sb));
-        document.body.toggleAttribute('data-cm-sky-main', !!(t && t.id !== DSH_ID && sky.main));
+        // a wallpaper replaces the sky wherever it covers
+        const wp = document.body.getAttribute('data-cm-wp');
+        document.body.toggleAttribute('data-cm-sky-sb', !!(t && t.id !== DSH_ID && sky.sb && wp !== 'all'));
+        document.body.toggleAttribute('data-cm-sky-main', !!(t && t.id !== DSH_ID && sky.main && !wp));
         if (!sheet.isConnected) document.head.append(sheet);
       };
       const skyOf_ = (id) => ({ ...skyDefault(id), ...((state.skies || {})[id] || {}) });
@@ -2615,6 +2851,8 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
           look.set({ ink: state.inks[id] || (id === HAN_ID ? LOOK_DEFAULT.ink : 'neutral') });
           notify();
         },
+        /** Re-evaluate the sky attributes (after the wallpaper changed). */
+        repaint() { paint(); },
         /** Where the current theme's sky gradient goes: { sb, main }. */
         sky: () => skyOf_(state.id),
         setSky(patch) {
@@ -2741,6 +2979,22 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 .cm-ap-seg button[aria-checked="true"] { background: var(--ap-soft); color: var(--ap-accent); font-weight: 500; }
 .cm-ap-seg button:disabled { opacity: .4; cursor: not-allowed; }
 .cm-ap-seg-4 { grid-template-columns: repeat(4, 1fr); flex: 1; }
+.cm-ap-seg-2 { grid-template-columns: repeat(2, 1fr); margin-top: 8px; }
+.cm-ap-wp-row { display: flex; gap: 10px; align-items: stretch; }
+.cm-ap-wp-thumb { flex: none; width: 112px; height: 64px; border-radius: 8px; border: 1px solid var(--ap-edge); padding: 0; cursor: pointer;
+  background: center / cover no-repeat, var(--ap-soft); color: var(--dsw-alias-label-secondary); font: inherit; font-size: 12px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06); transition: border-color .18s, box-shadow .18s; }
+.cm-ap-wp-thumb[data-empty] { border-style: dashed; }
+.cm-ap-wp-thumb:hover, .cm-ap-wp-thumb:focus-visible { border-color: var(--ap-hot); box-shadow: var(--ap-glow); outline: none; }
+.cm-ap-wp-acts { display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+.cm-ap-wp-acts small { color: var(--dsw-alias-label-tertiary); font-size: 11px; line-height: 1.5; }
+.cm-ap-wp-btn { align-self: flex-start; border: 1px solid var(--ap-edge); border-radius: 6px; background: none; padding: 2px 10px; cursor: pointer;
+  font: inherit; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+.cm-ap-wp-btn:hover:not(:disabled) { border-color: var(--ap-hot); color: var(--dsw-alias-label-primary); }
+.cm-ap-wp-btn[data-on] { background: var(--ap-soft); color: var(--ap-accent); border-color: var(--ap-hot); }
+.cm-ap-wp-btn:disabled { opacity: .5; cursor: default; }
+.cm-ap-wp-err { margin: 6px 0 0; font-size: 12px; color: var(--dsw-alias-state-error-primary); }
+.cm-ap-wp .cm-ap-range { margin-top: 8px; }
 .cm-ap-weight { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .cm-ap-weight > span { flex: none; width: 28px; color: var(--dsw-alias-label-secondary); }
 .cm-ap-list { display: flex; flex-direction: column; gap: 2px; }
@@ -2930,7 +3184,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
         tile('sb', '侧边栏', '左侧侧边栏铺满从天顶到地平线的渐变'),
         tile('main', '主面板', '对话区铺一层更柔和的同色渐变，正文仍然清晰'));
     }
-    function AppearanceControls({ bridge, look, themes }) {
+    function AppearanceControls({ bridge, look, themes, wallpaper }) {
       const snap = React.useSyncExternalStore(bridge.subscribe, bridge.snapshot);
       const lk = React.useSyncExternalStore(look.subscribe, look.get);
       const ts = React.useSyncExternalStore(themes.subscribe, themes.get);
@@ -3070,6 +3324,8 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           inkList,
           h('p', { key: 's5s', className: 'cm-ap-sec', title: '把主题配色画成一片日落天空的渐变；每套主题分别记住自己的选择' }, '渐变天空'),
           h(SkyControls, { key: 'sky', themes, scheme }),
+          wallpaper ? h('p', { key: 's5w', className: 'cm-ap-sec', title: '用你自己的图片做背景，会替换它覆盖范围内的渐变天空' }, '壁纸') : null,
+          wallpaper ? h(WallpaperControls, { key: 'wp', wallpaper }) : null,
           h('p', { key: 's6', className: 'cm-ap-sec' }, '面板不透明度'),
           h('div', { key: 'op' }, rangeRow('sbAlpha', '侧边栏'), rangeRow('mainAlpha', '主面板')),
         ]),
@@ -4496,6 +4752,19 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           return () => { off(); offMedia(); themes.clear(); };
         });
 
+        // the user's wallpaper: loaded from IndexedDB, re-applied when the
+        // DeepSeek Harness (native) theme comes or goes, removed on unload
+        const wallpaper = wallpaperStore(() => themes.repaint());
+        ctx.effect(() => {
+          const css = document.createElement('style');
+          css.dataset.plugin = '@xiaonerner0821/dsh-hanmo:wallpaper';
+          css.textContent = WALLPAPER_CSS;
+          document.head.append(css);
+          wallpaper.load();
+          const offNative = native.subscribe(() => wallpaper.apply());
+          return () => { offNative(); wallpaper.clear(); themes.repaint(); css.remove(); };
+        });
+
         // first run only: adopt the chosen pair unless the user already picked fonts
         ctx.effect(() => {
           const timer = setTimeout(() => {
@@ -4528,7 +4797,7 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           name: 'settings.general.item', id: 'hanmo-color-theme', order: 10.5,
         }, SettingsThemeRow));
 
-        function HeaderAppearance() { return h(AppearanceControls, { bridge, look, themes }); }
+        function HeaderAppearance() { return h(AppearanceControls, { bridge, look, themes, wallpaper }); }
         ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
           name: 'conversation.session.header.utilities', id: 'hanmo-appearance', order: 1000,
           label: () => '外观与字体',
