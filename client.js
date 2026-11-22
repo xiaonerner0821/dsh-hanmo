@@ -2109,7 +2109,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none' width='${W}' height='${H}'><defs>`
         + `<linearGradient id='d' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='0' y2='${H}'>${fall}</linearGradient>`
         + `<radialGradient id='w' cx='${cx}' cy='0' r='560' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .22) translate(-${cx} 0)'>`
-        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, A * 1.5).toFixed(3)}'/><stop offset='.45' stop-color='${col}' stop-opacity='${(A * 0.75).toFixed(3)}'/>`
+        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, A * 0.72).toFixed(3)}'/><stop offset='.45' stop-color='${col}' stop-opacity='${(A * 0.32).toFixed(3)}'/>`
         + `<stop offset='1' stop-color='${col}' stop-opacity='0'/></radialGradient>`
         + `<filter id='b1' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='4.5 3'/></filter>`
         + `<filter id='b2' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='22 10'/></filter>`
@@ -2117,8 +2117,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 0 0 0 1.35' result='a'/>`
         + `<feComposite in='SourceGraphic' in2='a' operator='in'/><feGaussianBlur stdDeviation='1.2'/></filter></defs>`
         + `<g fill='url(#d)' filter='url(#b2)'>${broad}</g><g fill='url(#d)' filter='url(#b1)'>${thin}</g>`
-        + `<rect x='${cx - 760}' y='0' width='1520' height='150' fill='url(#w)' opacity='.55' filter='url(#b2)'/>`
-        + `<rect x='${cx - 760}' y='0' width='1520' height='150' fill='url(#w)' filter='url(#c)'/></svg>`;
+        + `<rect x='${cx - 700}' y='0' width='1400' height='130' fill='url(#w)' opacity='.38' filter='url(#b2)'/>`
+        + `<rect x='${cx - 700}' y='0' width='1400' height='130' fill='url(#w)' opacity='.7' filter='url(#c)'/></svg>`;
       lightCache.set(key, svg);
       return svg;
     }
