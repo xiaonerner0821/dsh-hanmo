@@ -1974,14 +1974,14 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#e3eefa', dim: '#a8bfd6', faint: '#6f88a3', accent: '#4cc2ff', accent2: '#7c9cff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4cc2ff', num: '#c7a6ff', type: '#f2d28a', com: '#5f7a96', punc: '#bccde0',
           sky: [['#3e6f81', 0], ['#155b7a', 8], ['#05416e', 18], ['#03295e', 30], ['#03194e', 44], ['#03103e', 60], ['#030c30', 78], ['#030b24', 100]],
-          sun: 'rgba(196, 232, 255, .55)', sunFar: true, rays: 'rgba(205, 234, 255, .32)', rayHalf: 30,
+          sun: 'rgba(200, 236, 255, .64)', sunFar: true, rays: 'rgba(212, 238, 255, .42)', rayHalf: 20,
           waves: { kind: 'bubbles', color: '#d2e8ff', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
           sky: [['#eefaf8', 0], ['#c8f0ea', 9], ['#9ee2dc', 22], ['#74d0d4', 40], ['#58bdcd', 60], ['#47afc8', 80], ['#3fa6c4', 100]],
-          sun: 'rgba(255, 255, 244, .9)', rays: 'rgba(255, 255, 250, .45)', rayHalf: 30,
+          sun: 'rgba(255, 255, 246, 1)', rays: 'rgba(255, 255, 252, .56)', rayHalf: 20,
           waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
@@ -2068,7 +2068,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const HALF = v.rayHalf || 31; // the cone's half-width, degrees
       let prev = 180 - HALF - 4;
       for (;;) {
-        const w = 0.4 + rr() * 2.1, c = prev + w + 0.5 + rr() * 3.4;
+        const w = 0.35 + rr() * 1.7, c = prev + w + 0.4 + rr() * 2.6;
         if (c + w > 180 + HALF + 4) break;
         const off = Math.abs(c - 180) / HALF;
         // strongest on the sun's own axis, thinning (not vanishing) to the rim
@@ -2307,7 +2307,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       return [
         ...waveLayers(v, 1),
         sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH, k: dark ? 0.72 : 1 }),
-        ...seaDepth(v, list, sunAt, dark ? 0.62 : 0.85),
+        ...seaDepth(v, list, sunAt, dark ? 0.72 : 0.9),
         baseLayer(list),
       ].join(', ');
     }
