@@ -1973,15 +1973,15 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         dark: { bg: '#08162a', side: '#071324', l1: '#0e2038', l2: '#142a45', l3: '#1b3452', ov: '#0f223a', code: '#061226',
           text: '#e3eefa', dim: '#a8bfd6', faint: '#6f88a3', accent: '#4cc2ff', accent2: '#7c9cff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4cc2ff', num: '#c7a6ff', type: '#f2d28a', com: '#5f7a96', punc: '#bccde0',
-          sky: [['#3e6f81', 0], ['#155b7a', 8], ['#05416e', 18], ['#03295e', 30], ['#03194e', 44], ['#03103e', 60], ['#030c30', 78], ['#030b24', 100]],
-          sun: 'rgba(214, 242, 255, .48)', sunFar: true, rays: 'rgba(226, 244, 255, .3)', rayHalf: 8,
+          sky: [['#1f7ea3', 0], ['#126a93', 8], ['#0a5282', 18], ['#073d6c', 30], ['#062c56', 44], ['#051f43', 60], ['#041733', 78], ['#031127', 100]], readKeep: 0.3,
+          sun: 'rgba(214, 242, 255, .48)', sunFar: true, rays: 'rgba(226, 244, 255, .3)', rayHalf: 8, surface: 0.62,
           waves: { kind: 'bubbles', color: '#d2e8ff', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
           sky: [['#e8f7f5', 0], ['#b9eae3', 9], ['#8bdad6', 22], ['#63c5cc', 40], ['#4bafc2', 60], ['#3ba0bd', 80], ['#3397ba', 100]],
-          sun: 'rgba(255, 255, 248, .78)', rays: 'rgba(255, 255, 252, .4)', rayHalf: 8,
+          sun: 'rgba(255, 255, 248, .78)', rays: 'rgba(255, 255, 252, .4)', rayHalf: 8, surface: 0.6,
           waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
@@ -2062,64 +2062,77 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // shared (sidebar + main panel): the image's centre sits on the seam,
       // the same 2400px image laid from each side, so the shafts run across
       // it unbroken and stay out of the reading column. Alone: centred.
-      const place = (shared ? (parseFloat(at) >= 99 ? 'right -1200px top 0' : 'left -1200px top 0') : 'center top')
-        + ' / 2400px 100% no-repeat';
+      const place = (shared ? (parseFloat(at) >= 99 ? `right -${LIGHT_W / 2}px top 0` : `left -${LIGHT_W / 2}px top 0`) : 'center top')
+        + ` / ${LIGHT_W}px 100% no-repeat`;
       return [
         `linear-gradient(180deg, ${list.map(([c, p]) => `color-mix(in srgb, ${c} ${depth(p)}%, transparent) ${p}%`).join(', ')})`,
         `${svgUrl(lightSvg(v, k))} ${place}`,
       ];
     }
     const lightCache = new Map();
-    /** Sunlight seen from under the water, drawn as one SVG so it can be soft:
-     *  - the surface overhead: a bright, rippled patch where the sun's light
-     *    comes through (Snell's window), its ripples a thresholded noise net
-     *    (the caustic pattern a wavy surface throws), fading sideways;
-     *  - god rays: shafts leaving that patch from many points (not one), each
-     *    leaning toward the sun's direction a little differently, of random
-     *    width, length and strength, weighted toward the centre by a
-     *    forward-scattering phase (Henyey-Greenstein, g = 0.7), and dimming
-     *    with depth along the Beer-Lambert curve exp(-sigma * d). Thin shafts
-     *    and broad soft ones are blurred separately, so no shaft has a hard
-     *    edge. The image is 2400 wide and stretched to the column height. */
+    const LIGHT_W = 4000;
+    /** Sunlight seen from under the water, after photos of it:
+     *  - the surface overhead spans the whole top: long horizontal ripples,
+     *    bright crests between darker troughs (noise stretched sideways),
+     *    faint away from the sun and lit up around it;
+     *  - the sun itself: a small hot spot on the surface;
+     *  - god rays all converge on the sun, which sits above the surface, so
+     *    they fan out downward in perspective. Many fine streaks of random
+     *    width and strength, plus a few broad soft ones; each softened by a
+     *    blur and faded by depth along exp(-sigma * d) (Beer-Lambert), and
+     *    weighted toward the sun's axis (Henyey-Greenstein, g = 0.7).
+     * One image, LIGHT_W wide, stretched to the column height. */
     function lightSvg(v, k) {
-      const key = `${v.rays}|${v.rayHalf}|${k}`;
+      const key = `${v.rays}|${v.rayHalf}|${v.surface}|${k}`;
       if (lightCache.has(key)) return lightCache.get(key);
-      const r = seeded(0x1d7a), W = 2400, H = 1400, cx = W / 2;
+      const r = seeded(0x1d7a), W = LIGHT_W, H = 1400, cx = W / 2;
       const m = /rgba?\(([^)]+)\)/.exec(v.rays);
       const [cr, cg, cb, ca = 1] = m[1].split(',').map(Number);
-      const col = `rgb(${cr},${cg},${cb})`, A = ca * k;
-      const half = ((v.rayHalf || 20) * Math.PI) / 180;
+      const col = `rgb(${cr},${cg},${cb})`, A = ca * k, S = (v.surface != null ? v.surface : 0.5) * k;
+      const half = ((v.rayHalf || 10) * Math.PI) / 180;
       const g = 0.7, hg = (th) => (1 - g * g) / Math.pow(1 + g * g - 2 * g * Math.cos(th), 1.5), h0 = hg(0);
+      // the sun sits this far above the surface; every ray points back at it
+      const SY = -520;
       const ray = (thin) => {
-        const sx = cx + (r() * 2 - 1) * (thin ? 80 : 60);
-        const lean = (sx - cx) / 1100 + (r() * 2 - 1) * half * 0.5;
-        const ang = Math.max(-half * 1.3, Math.min(half * 1.3, lean));
-        const len = H * (thin ? 0.35 + r() * 0.5 : 0.5 + r() * 0.45);
-        const w0 = thin ? 1.5 + r() * 4 : 8 + r() * 12, w1 = thin ? 5 + r() * 14 : 28 + r() * 46;
-        const dx = Math.sin(ang), dy = Math.cos(ang), px = dy, py = -dx;
+        const ang = (r() * 2 - 1) * half * (thin ? 1 : 0.8);
+        const dx = Math.sin(ang), dy = Math.cos(ang);
+        // where the ray crosses the surface (y = 0)
+        const t0 = -SY / dy, sx = cx + dx * t0;
+        const len = H * (thin ? 0.3 + r() * 0.55 : 0.45 + r() * 0.45);
+        const w0 = thin ? 1.2 + r() * 3.5 : 7 + r() * 12, w1 = thin ? 4 + r() * 13 : 26 + r() * 44;
+        const px = dy, py = -dx;
         const ex = sx + dx * len, ey = dy * len;
         const pts = [sx + px * w0, py * w0, ex + px * w1, ey + py * w1, ex - px * w1, ey - py * w1, sx - px * w0, -py * w0];
-        const o = A * Math.pow(hg(ang * 1.6) / h0, 0.45) * (thin ? 0.35 + Math.pow(r(), 1.4) * 0.85 : 0.18 + r() * 0.3);
+        const o = A * Math.pow(hg(ang * 2.2) / h0, 0.5) * (thin ? 0.3 + Math.pow(r(), 1.6) * 0.9 : 0.16 + r() * 0.24);
         return `<polygon points='${pts.map(f1).join(' ')}' fill-opacity='${o.toFixed(3)}'/>`;
       };
       let thin = '', broad = '';
-      for (let i = 0; i < 46; i++) thin += ray(true);
-      for (let i = 0; i < 9; i++) broad += ray(false);
-      // Beer-Lambert falloff with depth for every shaft
-      const fall = [0, 0.1, 0.22, 0.38, 0.56, 0.78, 1].map((y) => `<stop offset='${y}' stop-color='${col}' stop-opacity='${Math.exp(-3.1 * y).toFixed(3)}'/>`).join('');
+      for (let i = 0; i < 52; i++) thin += ray(true);
+      for (let i = 0; i < 8; i++) broad += ray(false);
+      const fall = [0, 0.08, 0.2, 0.36, 0.55, 0.78, 1].map((y) => `<stop offset='${y}' stop-color='${col}' stop-opacity='${Math.exp(-3.4 * y).toFixed(3)}'/>`).join('');
+      // the surface: ripple crests across the top, lit most around the sun
+      const SH = 175;
+      const surf = `<filter id='s' x='0' y='0' width='100%' height='100%'>`
+        + `<feTurbulence type='turbulence' baseFrequency='0.003 0.032' numOctaves='3' seed='11' result='t'/>`
+        + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 0 0 0 1.55' result='a'/>`
+        + `<feComposite in='SourceGraphic' in2='a' operator='in'/><feGaussianBlur stdDeviation='1.2 0.7'/></filter>`
+        + `<radialGradient id='sl' cx='${cx}' cy='0' r='${W / 2}' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .12) translate(-${cx} 0)'>`
+        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, S).toFixed(3)}'/>`
+        + `<stop offset='.14' stop-color='${col}' stop-opacity='${(S * 0.55).toFixed(3)}'/>`
+        + `<stop offset='.5' stop-color='${col}' stop-opacity='${(S * 0.32).toFixed(3)}'/>`
+        + `<stop offset='1' stop-color='${col}' stop-opacity='${(S * 0.22).toFixed(3)}'/></radialGradient>`
+        + `<linearGradient id='sf' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fff'/><stop offset='.55' stop-color='#fff' stop-opacity='.6'/><stop offset='1' stop-color='#fff' stop-opacity='0'/></linearGradient>`
+        + `<mask id='sm'><rect width='${W}' height='${SH}' fill='url(#sf)'/></mask>`;
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none' width='${W}' height='${H}'><defs>`
         + `<linearGradient id='d' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='0' y2='${H}'>${fall}</linearGradient>`
-        + `<radialGradient id='w' cx='${cx}' cy='0' r='280' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .22) translate(-${cx} 0)'>`
-        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, A * 0.72).toFixed(3)}'/><stop offset='.45' stop-color='${col}' stop-opacity='${(A * 0.32).toFixed(3)}'/>`
-        + `<stop offset='1' stop-color='${col}' stop-opacity='0'/></radialGradient>`
-        + `<filter id='b1' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='4.5 3'/></filter>`
-        + `<filter id='b2' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='22 10'/></filter>`
-        + `<filter id='c' x='0' y='0' width='100%' height='100%'><feTurbulence type='turbulence' baseFrequency='0.011 0.05' numOctaves='2' seed='4' result='t'/>`
-        + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 0 0 0 1.35' result='a'/>`
-        + `<feComposite in='SourceGraphic' in2='a' operator='in'/><feGaussianBlur stdDeviation='1.2'/></filter></defs>`
+        + `<radialGradient id='sun' cx='${cx}' cy='0' r='170' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .3) translate(-${cx} 0)'>`
+        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, S * 1.3).toFixed(3)}'/><stop offset='.5' stop-color='${col}' stop-opacity='${(S * 0.45).toFixed(3)}'/><stop offset='1' stop-color='${col}' stop-opacity='0'/></radialGradient>`
+        + `<filter id='b1' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='3.5 2'/></filter>`
+        + `<filter id='b2' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='18 8'/></filter>`
+        + surf + `</defs>`
         + `<g fill='url(#d)' filter='url(#b2)'>${broad}</g><g fill='url(#d)' filter='url(#b1)'>${thin}</g>`
-        + `<rect x='${cx - 300}' y='0' width='600' height='100' fill='url(#w)' opacity='.38' filter='url(#b2)'/>`
-        + `<rect x='${cx - 300}' y='0' width='600' height='100' fill='url(#w)' opacity='.7' filter='url(#c)'/></svg>`;
+        + `<g mask='url(#sm)'><rect width='${W}' height='${SH}' fill='url(#sl)' filter='url(#s)'/></g>`
+        + `<rect x='${cx - 200}' y='0' width='400' height='70' fill='url(#sun)' filter='url(#b2)'/></svg>`;
       lightCache.set(key, svg);
       return svg;
     }
@@ -2337,7 +2350,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * reaches the farthest corner, so the glow runs on unbroken. */
     function joinedSky(v, dark, sunAt, size) {
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
-      const keep = READ_KEEP(dark);
+      const keep = v.readKeep != null ? v.readKeep : READ_KEEP(dark);
       const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
       return [
         ...waveLayers(v, 1),
