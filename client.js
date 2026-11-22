@@ -2636,6 +2636,18 @@ ${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) {
   text-shadow: 0 0 6px ${m(v.bg, dark ? 92 : 85)}, 0 0 2px ${m(v.bg, dark ? 85 : 75)};
 }
 ${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) :is([class*="_tab"], button, [class*="_count"]) { color: color-mix(in srgb, ${v.text} 90%, ${v.bg}); }
+/* dsh-multi-session tabs on the sky: the active tab was a solid page-colour
+ * slab (bg-layer-1), a dark block over a lit sea. Make it a frosted pane of the
+ * sky instead: a translucent lift of the panel tone, blurred, a hairline rim
+ * and a lit top edge in the theme's accent, so it belongs to the water */
+${MN} ${F} [class*="_centerCol"] .dms-tab[aria-selected="true"] {
+  background: linear-gradient(180deg, ${m(v.l2, dark ? 62 : 78)}, ${m(v.l1, dark ? 46 : 64)}) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.25); backdrop-filter: blur(12px) saturate(1.25);
+  box-shadow: inset 0 0 0 .5px ${m(v.text, dark ? 18 : 14)}, inset 0 1px 0 ${m(v.accent, dark ? 42 : 30)},
+    0 2px 10px -4px ${m(dark ? '#000000' : v.text, dark ? 45 : 14)} !important;
+}
+${MN} ${F} [class*="_centerCol"] .dms-tab:not([aria-selected="true"]):hover { background: ${m(v.l1, dark ? 30 : 46)}; }
+${MN} ${F} [class*="_centerCol"] .dms-tab:not([aria-selected="true"]) { color: color-mix(in srgb, ${v.text} 82%, ${v.bg}); }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
 ${v.sunTop && !v.rays ? `/* a sun at the top lights the very strip where the header tabs and the
  * first lines of the transcript sit. A veil of the page, under the content
