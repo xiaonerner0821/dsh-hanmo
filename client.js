@@ -1962,6 +1962,42 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           kw: '#c4436a', str: '#a8620c', fn: '#d27410', num: '#2f78c9', type: '#8c6400', com: '#9b9cb0', punc: '#44475c',
           sky: [['#fde2b4', 0], ['#fcd8bd', 14], ['#f7d6d2', 30], ['#ead8ea', 48], ['#dbdff2', 66], ['#cfe2f4', 84], ['#c4ddf3', 100]],
           sun: 'rgba(255, 236, 170, .9)', haze: ['rgba(255, 190, 110, .1)', 'rgba(120, 170, 235, .07)'] } },
+      // 海浪: looking down into the sea. The light comes from the surface at
+      // the top (a pale sun shimmer on foam-white water) and the column
+      // deepens downward through aqua and turquoise into open-water blue.
+      // Light = a clear noon sea, kept pale enough for dark text at the
+      // bottom; dark = the sea at night, a faint bioluminescent sheen on the
+      // surface over deep navy. Teal accent, deep-water blue second accent.
+      { id: 'ocean', label: '海浪', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        dark: { bg: '#0d1c29', side: '#0b1824', l1: '#132636', l2: '#1a3142', l3: '#223c4f', ov: '#142838', code: '#0a1722',
+          text: '#e4f1f4', dim: '#a9c3cc', faint: '#6f8c98', accent: '#4fd1c5', accent2: '#6aa8ff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
+          kw: '#7cb4ff', str: '#7fe0c8', fn: '#4fd1c5', num: '#c7a6ff', type: '#f2d28a', com: '#5f7d89', punc: '#bcd0d7',
+          sky: [['#1f5663', 0], ['#19475a', 12], ['#14394f', 28], ['#102d44', 48], ['#0d2439', 70], ['#0a1b2e', 100]],
+          sun: 'rgba(110, 232, 220, .3)', haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
+        light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
+          text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
+          kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
+          sky: [['#eef9f8', 0], ['#d6f1f1', 14], ['#bce8eb', 32], ['#a3dbe4', 52], ['#8fcde0', 72], ['#80bdd9', 88], ['#76b0d4', 100]],
+          sun: 'rgba(255, 255, 238, .9)', haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
+      // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
+      // in a clear sky, the turquoise sea, a thin white line of breaking foam,
+      // then warm sand. The foam is a narrow bright band so the bands read as
+      // sky / sea / shore rather than one blur. Light = midday; dark = the
+      // same beach under the moon (night sky, dark sea, a pale surf line,
+      // cool grey-brown sand). Turquoise accent, sun-orange second accent.
+      { id: 'beach', label: '沙滩', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        dark: { bg: '#151b24', side: '#131922', l1: '#1c2430', l2: '#242e3b', l3: '#2e3947', ov: '#1d2531', code: '#11171f',
+          text: '#f0ece4', dim: '#c0bab0', faint: '#878f96', accent: '#48d1d9', accent2: '#ffb35c', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a80',
+          kw: '#ff9a7a', str: '#8fe3c4', fn: '#48d1d9', num: '#ffb35c', type: '#ffe08a', com: '#6c757d', punc: '#cdd3d8',
+          sky: [['#1b2b4b', 0], ['#1d3554', 20], ['#184a5a', 40], ['#13404f', 54], ['#3a6a70', 60], ['#2d5359', 63], ['#463f33', 70], ['#3a3329', 100]],
+          sun: 'rgba(255, 236, 190, .3)', haze: ['rgba(150, 180, 255, .06)', 'rgba(220, 190, 130, .06)'] },
+        light: { bg: '#fffbf3', side: '#f8efdc', l1: '#ffffff', l2: '#fbf4e6', l3: '#f2e6cc', ov: '#ffffff', code: '#fbf5ea',
+          text: '#23303a', dim: '#556470', faint: '#8e9aa2', accent: '#0a8fa3', accent2: '#e07a2f', ok: '#2b8a52', warn: '#b06e00', err: '#c83a42',
+          kw: '#d4583f', str: '#2b8a6a', fn: '#0a8fa3', num: '#e07a2f', type: '#a46b00', com: '#9aa1a3', punc: '#3e4a52',
+          sky: [['#bfe2f6', 0], ['#d8eff8', 20], ['#a6e0e3', 40], ['#84d0d5', 54], ['#eefaf6', 60], ['#cdeee6', 63], ['#f5e7c9', 69], ['#eed8aa', 100]],
+          sun: 'rgba(255, 238, 160, .95)', haze: ['rgba(255, 230, 150, .1)', 'rgba(240, 200, 130, .08)'] } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2400,7 +2436,8 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     }
     /** Where the sky goes by default: 落日 and 朝阳 are one sky over the whole
      * window (sidebar and main panel joined), every other theme starts plain. */
-    const skyDefault = (id) => ({ sb: id === 'sunset' || id === 'sunrise', main: id === 'sunset' || id === 'sunrise' });
+    const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach']);
+    const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
 
     const THEME_KEY = 'hanmo:theme';
     const MODES = ['light', 'dark', 'system'];
