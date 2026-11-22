@@ -6,7 +6,7 @@ An appearance plugin for the [DeepSeek Harness](https://www.npmjs.com/package/@d
 
 ![Hanmo walking through its colour themes, then the four sky themes — Sunset, Sunrise, Deep Sea and Beach — with the comet on New Session](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/hanmo.gif)
 
-Full 36-second film: [hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.4.0/hanmo-daynight.mp4)
+Full 33-second film: [hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.4.0/hanmo-daynight.mp4)
 
 ![Theme picker](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/theme-cards.png)
 

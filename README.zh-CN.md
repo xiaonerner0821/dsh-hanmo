@@ -6,7 +6,7 @@
 
 ![翰墨轮转各套配色主题，再依次换成落日、朝阳、深海、沙滩四套天空主题，「新会话」按钮上带彗星光效](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/hanmo.gif)
 
-完整宣传片（36 秒）：[hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.4.0/hanmo-daynight.mp4)
+完整宣传片（33 秒）：[hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.4.0/hanmo-daynight.mp4)
 
 ![主题选择](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/theme-cards.png)
 
