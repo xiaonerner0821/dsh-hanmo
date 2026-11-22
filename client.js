@@ -1967,7 +1967,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // a bright cerulean (stopping short of navy so dark text still reads).
       // Dark = under the surface, looking up: sunlight breaks in at the top
       // and fans down in soft shafts, the water deepening from sunlit teal to
-      // abyssal blue. Both carry a faint layer of wave lines.
+      // abyssal blue. Both carry a scatter of rising air bubbles.
       { id: 'ocean', label: '海浪', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
         fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
         dark: { bg: '#0d1c29', side: '#0b1824', l1: '#132636', l2: '#1a3142', l3: '#223c4f', ov: '#142838', code: '#0a1722',
@@ -1975,14 +1975,14 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4fd1c5', num: '#c7a6ff', type: '#f2d28a', com: '#5f7d89', punc: '#bcd0d7',
           sky: [['#3d9ea6', 0], ['#277684', 9], ['#18556b', 22], ['#12445c', 40], ['#0e3449', 60], ['#0a2638', 80], ['#071a29', 100]],
           sun: 'rgba(206, 252, 244, .66)', sunFar: true, rays: 'rgba(222, 252, 246, .36)',
-          waves: { kind: 'lines', color: '#a8f0ea', a: 0.13 },
+          waves: { kind: 'bubbles', color: '#c8f7f0', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
           sky: [['#eefaf8', 0], ['#c8f0ea', 9], ['#9ee2dc', 22], ['#74d0d4', 40], ['#58bdcd', 60], ['#47afc8', 80], ['#3fa6c4', 100]],
           sun: 'rgba(255, 255, 244, 1)', rays: 'rgba(255, 255, 250, .5)',
-          waves: { kind: 'lines', color: '#ffffff', a: 0.42 },
+          waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
       // in a clear sky, the turquoise sea, a thin white line of breaking foam,
@@ -1995,14 +1995,14 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         dark: { bg: '#151b24', side: '#131922', l1: '#1c2430', l2: '#242e3b', l3: '#2e3947', ov: '#1d2531', code: '#11171f',
           text: '#f0ece4', dim: '#c0bab0', faint: '#878f96', accent: '#48d1d9', accent2: '#ffb35c', ok: '#86d9a4', warn: '#ffd27a', err: '#ff7a80',
           kw: '#ff9a7a', str: '#8fe3c4', fn: '#48d1d9', num: '#ffb35c', type: '#ffe08a', com: '#6c757d', punc: '#cdd3d8',
-          sky: [['#1b2b4b', 0], ['#1d3554', 20], ['#184a5a', 40], ['#13404f', 54], ['#3a6a70', 60], ['#2d5359', 63], ['#463f33', 70], ['#3a3329', 100]],
-          waves: { kind: 'foam', color: '#d6eee8', a: 0.32, at: 57 },
+          sky: [['#1b2b4b', 0], ['#1d3554', 20], ['#184a5a', 38], ['#13404f', 50], ['#1f5560', 54], ['#2b5a5a', 58], ['#38342b', 61], ['#4a4234', 68], ['#3a3329', 100]],
+          waves: { kind: 'foam', color: '#d6eee8', a: 0.5, at: 59, shade: 'rgba(0, 0, 0, .26)' },
           sun: 'rgba(255, 236, 190, .3)', haze: ['rgba(150, 180, 255, .06)', 'rgba(220, 190, 130, .06)'] },
         light: { bg: '#fffbf3', side: '#f8efdc', l1: '#ffffff', l2: '#fbf4e6', l3: '#f2e6cc', ov: '#ffffff', code: '#fbf5ea',
           text: '#23303a', dim: '#556470', faint: '#8e9aa2', accent: '#0a8fa3', accent2: '#e07a2f', ok: '#2b8a52', warn: '#b06e00', err: '#c83a42',
           kw: '#d4583f', str: '#2b8a6a', fn: '#0a8fa3', num: '#e07a2f', type: '#a46b00', com: '#9aa1a3', punc: '#3e4a52',
-          sky: [['#bfe2f6', 0], ['#d8eff8', 20], ['#a6e0e3', 40], ['#84d0d5', 54], ['#eefaf6', 60], ['#cdeee6', 63], ['#f5e7c9', 69], ['#eed8aa', 100]],
-          waves: { kind: 'foam', color: '#ffffff', a: 0.85, at: 57 },
+          sky: [['#bfe2f6', 0], ['#d8eff8', 20], ['#a6e0e3', 38], ['#84d0d5', 50], ['#9fdcd8', 54], ['#c5ebe2', 58], ['#dccaa0', 61], ['#f0e0bf', 68], ['#eed8aa', 100]],
+          waves: { kind: 'foam', color: '#ffffff', a: 0.92, at: 59, shade: 'rgba(120, 92, 44, .18)' },
           sun: 'rgba(255, 238, 160, .95)', haze: ['rgba(255, 230, 150, .1)', 'rgba(240, 200, 130, .08)'] } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
@@ -2069,8 +2069,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       ];
     }
     /** The wave texture of a sea theme (v.waves), as background layers:
-     * 'lines' = irregular swell lines (swellLayers); 'foam' = the line of
-     * breaking surf (foamLayers). Both are seeded-random, so every crest has
+     * 'bubbles' = rising air bubbles (bubbleLayers); 'foam' = the surf
+     * washing up the sand (foamLayers). Both are seeded-random, so every crest has
      * its own shape. `k` scales the strength (softer on the main panel,
      * where text sits on it). */
     /** Seeded PRNG (mulberry32): random-looking waves that come out the same
@@ -2090,87 +2090,110 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function waveLayers(v, k) {
       const w = v.waves;
       if (!w) return [];
-      const key = `${w.kind}|${w.color}|${w.a}|${w.at}|${k}`;
-      if (!waveCache.has(key)) waveCache.set(key, w.kind === 'lines' ? swellLayers(w, k) : foamLayers(w, k));
+      const key = `${w.kind}|${w.color}|${w.a}|${w.at}|${w.shade}|${k}`;
+      if (!waveCache.has(key)) waveCache.set(key, w.kind === 'bubbles' ? bubbleLayers(w, k) : foamLayers(w, k));
       return waveCache.get(key);
     }
-    /** 海浪: swell lines seen from above. Rows at uneven spacing, each broken
-     * into runs of 1-4 crests with gaps between; every crest has its own
-     * length, height and lean (a long back, a steeper front), and every run
-     * its own weight and opacity. A large tile (1080x560) keeps the repeat
-     * out of sight; runs crossing the right edge wrap onto the left so the
-     * tile joins without a seam. */
-    function swellLayers(w, k) {
-      const r = seeded(0x5ea1), W = 1080, H = 560;
+    /** 海浪: air bubbles in the water. A dozen rising trails (bubbles that
+     * swell as they climb and sway side to side), loose singles of every
+     * size, and a few small clusters, all seeded-random. Each bubble is a
+     * clear disc with a bright rim, a specular highlight and a faint
+     * reflected arc; tiny ones are soft dots. Drawn with <use> of two
+     * symbols to keep the image small; anything crossing a tile edge is
+     * repeated on the opposite side, so the 960x1180 tile joins seamlessly. */
+    function bubbleLayers(w, k) {
+      const r = seeded(0xb0b1e), W = 960, H = 1180, c = w.color;
       const op = (x) => Math.min(1, x * k).toFixed(3);
       let body = '';
-      for (let y = 20 + r() * 12; y < H - 12; y += 24 + r() * 42) {
-        const base = y;
-        let x = r() * 140;
-        while (x < W) {
-          const crests = 1 + Math.floor(r() * 4);
-          let d = `M${f1(x)} ${f1(base)}`, cx = x, cy = base;
-          for (let i = 0; i < crests; i++) {
-            const L = 24 + r() * 96, A = 1.2 + r() * (L / 13), lean = 0.5 + r() * 0.24;
-            const peak = cx + L * lean, ny = base + (r() - 0.5) * 3.2;
-            d += ` C${f1(cx + L * 0.24)} ${f1(cy)} ${f1(peak - L * 0.2)} ${f1(base - A)} ${f1(peak)} ${f1(base - A)}`;
-            d += ` C${f1(peak + L * 0.06)} ${f1(base - A)} ${f1(cx + L * 0.9)} ${f1(ny)} ${f1(cx + L)} ${f1(ny)}`;
-            cx += L; cy = ny;
-          }
-          const path = `<path d='${d}' stroke-opacity='${op(w.a * (0.3 + r() * 0.7))}' stroke-width='${f1(0.6 + r() * 1.2)}'/>`;
-          body += path;
-          if (cx > W) body += `<g transform='translate(-${W} 0)'>${path}</g>`;
-          x = cx + 16 + r() * 160;
+      const put = (x0, y0, rad, a) => {
+        const x = ((x0 % W) + W) % W, y = ((y0 % H) + H) % H;
+        const id = rad < 2 ? 'd' : 'u', d = f1(rad * 2);
+        const xs = [x], ys = [y];
+        if (x < rad + 1) xs.push(x + W); if (x > W - rad - 1) xs.push(x - W);
+        if (y < rad + 1) ys.push(y + H); if (y > H - rad - 1) ys.push(y - H);
+        for (const px of xs) for (const py of ys) {
+          body += `<use href='#${id}' x='${f1(px - rad)}' y='${f1(py - rad)}' width='${d}' height='${d}' opacity='${op(a)}'/>`;
+        }
+      };
+      for (let i = 0; i < 12; i++) {
+        let x = r() * W, y = r() * H, rad = 0.8 + r() * 1.2;
+        const n = 4 + Math.floor(r() * 9), amp = 1.5 + r() * 4, ph = r() * 6.3, drift = (r() - 0.5) * 3, base = 0.45 + r() * 0.45;
+        for (let j = 0; j < n; j++) {
+          put(x + Math.sin(ph + j * 1.1) * amp, y, rad, w.a * base * (0.7 + r() * 0.3));
+          y -= rad * 2 + 5 + r() * 20; x += drift; rad = Math.min(8, rad * (1.06 + r() * 0.16));
         }
       }
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><g fill='none' stroke='${w.color}' stroke-linecap='round'>${body}</g></svg>`;
+      for (let i = 0; i < 40; i++) {
+        const big = r() < 0.18, rad = big ? 3 + r() * 6.5 : 0.7 + r() * 1.8;
+        put(r() * W, r() * H, rad, w.a * (0.25 + r() * 0.55));
+      }
+      for (let i = 0; i < 6; i++) {
+        const cx = r() * W, cy = r() * H, n = 3 + Math.floor(r() * 6);
+        for (let j = 0; j < n; j++) put(cx + (r() - 0.5) * 26, cy + (r() - 0.5) * 26, 0.7 + r() * 2.6, w.a * (0.35 + r() * 0.5));
+      }
+      const defs = `<defs><radialGradient id='g'><stop offset='.5' stop-color='${c}' stop-opacity='0'/>`
+        + `<stop offset='.86' stop-color='${c}' stop-opacity='.22'/><stop offset='1' stop-color='${c}' stop-opacity='.55'/></radialGradient>`
+        + `<symbol id='u' viewBox='-1 -1 2 2'><circle r='.92' fill='url(#g)' stroke='${c}' stroke-opacity='.8' stroke-width='.12'/>`
+        + `<ellipse cx='-.38' cy='-.42' rx='.24' ry='.14' transform='rotate(-38 -.38 -.42)' fill='#fff' fill-opacity='.9'/>`
+        + `<path d='M.52 .5 A.72 .72 0 0 1 -.08 .82' fill='none' stroke='#fff' stroke-opacity='.4' stroke-width='.08'/></symbol>`
+        + `<symbol id='d' viewBox='-1 -1 2 2'><circle r='.9' fill='${c}' fill-opacity='.5'/><circle cx='-.3' cy='-.3' r='.36' fill='#fff' fill-opacity='.75'/></symbol></defs>`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'>${defs}${body}</svg>`;
       return [`${svgUrl(svg)} 0 0 / ${W}px ${H}px repeat`];
     }
-    /** 沙滩: the line of breaking surf at w.at (% height). Scallops of random
-     * width, height and lean (scaled to sum exactly to the tile width, so the
-     * strip repeats seamlessly), a crisp edge over a foam body that thins
-     * toward the sand, scattered foam specks, and below it a lacy, broken
-     * backwash line. */
+    /** 沙滩: surf washing up the sand, seen from above. Built from SVG noise
+     * (feTurbulence, stitched so the 1200px strip tiles seamlessly) rather
+     * than drawn shapes, so no two stretches look alike:
+     *  - the break: a soft band of white water, its edges wobbled by noise;
+     *  - foam lace: noise thresholded into the net of holes real foam has,
+     *    dense at the break and thinning toward the shore;
+     *  - the swash edge: lobes of random width bulging up the beach with
+     *    cusps between them, a bright rim with a soft glow;
+     *  - wet sand: a darker band just past the edge, and a faint broken line
+     *    left by an earlier wave. Wobbles are vertical only, so the tile's
+     *    side edges never pull in transparent pixels. */
     function foamLayers(w, k) {
-      const r = seeded(0xbeac), W = 1320, H = 46, base = 12;
+      const r = seeded(0xbeac4), W = 1200, H = 96, E = 64, c = w.color;
       const op = (x) => Math.min(1, x * k).toFixed(3);
-      const widths = [];
-      let sum = 0;
-      while (sum < W) { const L = 20 + r() * 100; widths.push(L); sum += L; }
-      const s = W / sum;
-      let x = 0, edge = `M0 ${base}`;
-      for (const L0 of widths) {
-        const L = L0 * s, A = 1.6 + r() * Math.min(9, L / 9), lean = 0.32 + r() * 0.38, peak = x + L * lean;
-        edge += ` C${f1(x + L * 0.05)} ${f1(base - A * 0.8)} ${f1(peak - L * 0.25)} ${f1(base - A)} ${f1(peak)} ${f1(base - A)}`;
-        edge += ` C${f1(peak + L * 0.3)} ${f1(base - A)} ${f1(x + L * 0.95)} ${f1(base - A * 0.5)} ${f1(x + L)} ${f1(base)}`;
-        x += L;
-      }
-      let dots = '';
-      for (let i = 0; i < 80; i++) {
-        dots += `<circle cx='${f1(r() * W)}' cy='${f1(base + 3 + r() * (H - base - 6))}' r='${f1(0.5 + r() * 1.6)}' fill-opacity='${op(w.a * (0.25 + r() * 0.5))}'/>`;
-      }
-      const grad = `<linearGradient id='f' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${w.color}' stop-opacity='${op(w.a * 0.9)}'/>`
-        + `<stop offset='.4' stop-color='${w.color}' stop-opacity='${op(w.a * 0.45)}'/><stop offset='1' stop-color='${w.color}' stop-opacity='0'/></linearGradient>`;
-      const crest = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>${grad}</defs>`
-        + `<path fill='url(#f)' d='${edge} V${H} H0 Z'/>`
-        + `<path fill='none' stroke='${w.color}' stroke-opacity='${op(w.a)}' stroke-width='1.3' stroke-linejoin='round' d='${edge}'/>`
-        + `<g fill='${w.color}'>${dots}</g></svg>`;
-      let lace = '';
-      for (let lx = r() * 60; lx < W;) {
-        const n = 2 + Math.floor(r() * 4);
-        let d = `M${f1(lx)} ${f1(9 + (r() - 0.5) * 4)}`, cx = lx;
-        for (let i = 0; i < n; i++) {
-          const L = 12 + r() * 42, yy = 9 + (r() - 0.5) * 9;
-          d += ` Q${f1(cx + L / 2)} ${f1(yy + (r() - 0.5) * 9)} ${f1(cx + L)} ${f1(yy)}`;
-          cx += L;
+      const lobes = (y0, maxA, minL, spanL) => {
+        const widths = [];
+        let sum = 0;
+        while (sum < W) { const L = minL + r() * spanL; widths.push(L); sum += L; }
+        const s = W / sum;
+        let x = 0, d = `M0 ${y0}`;
+        for (const L0 of widths) {
+          const L = L0 * s, A = 1.5 + r() * Math.min(maxA, L / 14), peak = x + L * (0.35 + r() * 0.3);
+          d += ` C${f1(x + L * 0.12)} ${f1(y0 + A * 0.7)} ${f1(peak - L * 0.22)} ${f1(y0 + A)} ${f1(peak)} ${f1(y0 + A)}`;
+          d += ` C${f1(peak + L * 0.22)} ${f1(y0 + A)} ${f1(x + L * 0.9)} ${f1(y0 + A * 0.6)} ${f1(x + L)} ${f1(y0)}`;
+          x += L;
         }
-        const path = `<path d='${d}' stroke-opacity='${op(w.a * (0.22 + r() * 0.38))}' stroke-width='${f1(0.6 + r() * 1)}'/>`;
-        lace += path;
-        if (cx > W) lace += `<g transform='translate(-${W} 0)'>${path}</g>`;
-        lx = cx + 8 + r() * 100;
-      }
-      const wash = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='22'><g fill='none' stroke='${w.color}' stroke-linecap='round'>${lace}</g></svg>`;
-      return [`${svgUrl(crest)} 0 ${w.at}% / ${W}px ${H}px repeat-x`, `${svgUrl(wash)} 0 ${w.at + 6}% / ${W}px 22px repeat-x`];
+        return d;
+      };
+      const edge = lobes(E, 9, 36, 150), mark = lobes(E + 20, 5, 60, 160);
+      const wobble = (id, freq, scale, seed, blur) => `<filter id='${id}' filterUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'>`
+        + `<feTurbulence type='fractalNoise' baseFrequency='${freq}' numOctaves='2' seed='${seed}' stitchTiles='stitch' result='t'/>`
+        + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 .5 0 1 0 0 0 0 0 1 0 0 0 0 0 0 1' result='m'/>`
+        + `<feDisplacementMap in='SourceGraphic' in2='m' scale='${scale}' xChannelSelector='R' yChannelSelector='G'/>`
+        + (blur ? `<feGaussianBlur stdDeviation='0 ${blur}'/>` : '') + `</filter>`;
+      const defs = '<defs>'
+        + wobble('v1', '0.014 0.05', 16, 3, 2.4) + wobble('v2', '0.02 0.08', 5, 5, 0.5) + wobble('v3', '0.02 0.08', 5, 5, 1.6)
+        + `<filter id='l' filterUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'>`
+        + `<feTurbulence type='fractalNoise' baseFrequency='0.022 0.1' numOctaves='3' seed='9' stitchTiles='stitch' result='n'/>`
+        + `<feColorMatrix in='n' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 4.6 0 0 0 -1.9' result='a'/>`
+        + `<feComposite in='SourceGraphic' in2='a' operator='in'/></filter>`
+        + `<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${c}' stop-opacity='0'/>`
+        + `<stop offset='.08' stop-color='${c}' stop-opacity='${op(w.a)}'/><stop offset='.3' stop-color='${c}' stop-opacity='${op(w.a * 0.85)}'/>`
+        + `<stop offset='.55' stop-color='${c}' stop-opacity='${op(w.a * 0.6)}'/><stop offset='.7' stop-color='${c}' stop-opacity='${op(w.a * 0.35)}'/></linearGradient>`
+        + `<linearGradient id='s' gradientUnits='userSpaceOnUse' x1='0' y1='${E}' x2='0' y2='${E + 18}'>`
+        + `<stop offset='0' stop-color='${w.shade}'/><stop offset='1' stop-color='${w.shade}' stop-opacity='0'/></linearGradient>`
+        + `<clipPath id='c'><path d='${edge} V0 H0 Z'/></clipPath></defs>`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'>${defs}`
+        + `<path d='${edge} V${E + 18} H0 Z' fill='url(#s)' filter='url(#v2)'/>`
+        + `<path d='${mark}' fill='none' stroke='${c}' stroke-opacity='${op(w.a * 0.22)}' stroke-width='1' stroke-dasharray='70 26 140 40 52 30' filter='url(#v2)'/>`
+        + `<rect y='5' width='${W}' height='18' fill='${c}' fill-opacity='${op(w.a * 0.5)}' filter='url(#v1)'/>`
+        + `<g clip-path='url(#c)'><rect width='${W}' height='${H}' fill='url(#g)' filter='url(#l)'/></g>`
+        + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a * 0.35)}' stroke-width='4' filter='url(#v3)'/>`
+        + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a)}' stroke-width='1.5' filter='url(#v2)'/></svg>`;
+      return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x`];
     }
     const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
     /** Radius that reaches every corner of the window from any point in it:
