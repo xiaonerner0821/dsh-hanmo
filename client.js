@@ -2596,6 +2596,16 @@ ${SB} ${S} :is(${PANEL_ROW}, [class*="_settingsArea"] [class*="_triggerRow"]) {
   -webkit-backdrop-filter: blur(8px) saturate(1.2); backdrop-filter: blur(8px) saturate(1.2);
 }
 ${SB} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
+/* "show N more" on a sky: the solid page-colour tile read as a dark slab; a
+ * frosted pane of the sidebar tone with a hairline and an accent top edge */
+${SB} ${S} [class*="_sessionOverflowButton"] {
+  background: linear-gradient(180deg, ${m(v.l2, dark ? 56 : 72)}, ${m(v.l1, dark ? 40 : 58)}) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(1.2); backdrop-filter: blur(10px) saturate(1.2);
+  border-color: ${m(v.text, dark ? 16 : 12)} !important;
+  box-shadow: inset 0 1px 0 ${m(v.accent, dark ? 36 : 26)}, 0 2px 8px -4px ${m(dark ? '#000000' : v.text, dark ? 40 : 12)} !important;
+  color: color-mix(in srgb, ${v.text} 82%, transparent);
+}
+${SB} ${S} [class*="_sessionOverflowButton"]:hover { background: ${m(v.l2, dark ? 70 : 84)} !important; color: ${v.text}; }
 /* the small grey labels in the session list (age on the right, the meta line)
  * are DSH's tertiary grey at 10-12px, which washes out over a sky and the
  * bubbles in it: give them the theme's ink at 78% with a faint halo of the
