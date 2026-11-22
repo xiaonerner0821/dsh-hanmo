@@ -1974,14 +1974,14 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#e3eefa', dim: '#a8bfd6', faint: '#6f88a3', accent: '#4cc2ff', accent2: '#7c9cff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4cc2ff', num: '#c7a6ff', type: '#f2d28a', com: '#5f7a96', punc: '#bccde0',
           sky: [['#3e6f81', 0], ['#155b7a', 8], ['#05416e', 18], ['#03295e', 30], ['#03194e', 44], ['#03103e', 60], ['#030c30', 78], ['#030b24', 100]],
-          sun: 'rgba(214, 242, 255, .58)', sunFar: true, rays: 'rgba(226, 244, 255, .42)', rayHalf: 12,
+          sun: 'rgba(214, 242, 255, .48)', sunFar: true, rays: 'rgba(226, 244, 255, .3)', rayHalf: 8,
           waves: { kind: 'bubbles', color: '#d2e8ff', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
           sky: [['#e8f7f5', 0], ['#b9eae3', 9], ['#8bdad6', 22], ['#63c5cc', 40], ['#4bafc2', 60], ['#3ba0bd', 80], ['#3397ba', 100]],
-          sun: 'rgba(255, 255, 248, .85)', rays: 'rgba(255, 255, 252, .55)', rayHalf: 12,
+          sun: 'rgba(255, 255, 248, .78)', rays: 'rgba(255, 255, 252, .4)', rayHalf: 8,
           waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
@@ -2091,11 +2091,11 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const half = ((v.rayHalf || 20) * Math.PI) / 180;
       const g = 0.7, hg = (th) => (1 - g * g) / Math.pow(1 + g * g - 2 * g * Math.cos(th), 1.5), h0 = hg(0);
       const ray = (thin) => {
-        const sx = cx + (r() * 2 - 1) * (thin ? 120 : 90);
+        const sx = cx + (r() * 2 - 1) * (thin ? 80 : 60);
         const lean = (sx - cx) / 1100 + (r() * 2 - 1) * half * 0.5;
         const ang = Math.max(-half * 1.3, Math.min(half * 1.3, lean));
         const len = H * (thin ? 0.35 + r() * 0.5 : 0.5 + r() * 0.45);
-        const w0 = thin ? 2 + r() * 5 : 10 + r() * 18, w1 = thin ? 6 + r() * 20 : 40 + r() * 70;
+        const w0 = thin ? 1.5 + r() * 4 : 8 + r() * 12, w1 = thin ? 5 + r() * 14 : 28 + r() * 46;
         const dx = Math.sin(ang), dy = Math.cos(ang), px = dy, py = -dx;
         const ex = sx + dx * len, ey = dy * len;
         const pts = [sx + px * w0, py * w0, ex + px * w1, ey + py * w1, ex - px * w1, ey - py * w1, sx - px * w0, -py * w0];
@@ -2109,7 +2109,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const fall = [0, 0.1, 0.22, 0.38, 0.56, 0.78, 1].map((y) => `<stop offset='${y}' stop-color='${col}' stop-opacity='${Math.exp(-3.1 * y).toFixed(3)}'/>`).join('');
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none' width='${W}' height='${H}'><defs>`
         + `<linearGradient id='d' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='0' y2='${H}'>${fall}</linearGradient>`
-        + `<radialGradient id='w' cx='${cx}' cy='0' r='380' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .22) translate(-${cx} 0)'>`
+        + `<radialGradient id='w' cx='${cx}' cy='0' r='280' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .22) translate(-${cx} 0)'>`
         + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, A * 0.72).toFixed(3)}'/><stop offset='.45' stop-color='${col}' stop-opacity='${(A * 0.32).toFixed(3)}'/>`
         + `<stop offset='1' stop-color='${col}' stop-opacity='0'/></radialGradient>`
         + `<filter id='b1' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='4.5 3'/></filter>`
@@ -2118,8 +2118,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 0 0 0 1.35' result='a'/>`
         + `<feComposite in='SourceGraphic' in2='a' operator='in'/><feGaussianBlur stdDeviation='1.2'/></filter></defs>`
         + `<g fill='url(#d)' filter='url(#b2)'>${broad}</g><g fill='url(#d)' filter='url(#b1)'>${thin}</g>`
-        + `<rect x='${cx - 420}' y='0' width='840' height='110' fill='url(#w)' opacity='.38' filter='url(#b2)'/>`
-        + `<rect x='${cx - 420}' y='0' width='840' height='110' fill='url(#w)' opacity='.7' filter='url(#c)'/></svg>`;
+        + `<rect x='${cx - 300}' y='0' width='600' height='100' fill='url(#w)' opacity='.38' filter='url(#b2)'/>`
+        + `<rect x='${cx - 300}' y='0' width='600' height='100' fill='url(#w)' opacity='.7' filter='url(#c)'/></svg>`;
       lightCache.set(key, svg);
       return svg;
     }
