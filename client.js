@@ -2550,8 +2550,22 @@ ${SB} ${S} ${PANEL_ROW}:hover { background: ${m(v.l2, dark ? 74 : 82)}; }
 ${MN} ${F} [class*="_centerCol"] {
   --dsw-alias-bg-base: transparent;
   --dsw-linear-gradient-think: linear-gradient(180deg, transparent, transparent);
+  color: ${v.text};
   background: ${mainSkyGradient(v, dark)} !important;
 }
+/* text on a lit sky: DSH's secondary / tertiary labels are fixed greys that
+ * lose their contrast over the bright band; these are the same two steps
+ * taken from the theme's own ink instead (84% / 66% over the page), so the
+ * hierarchy holds and the header tabs and faint rows stay readable. */
+${MN} ${F} [class*="_centerCol"] {
+  --dsw-alias-label-secondary: color-mix(in srgb, ${v.text} 84%, ${v.bg});
+  --dsw-alias-label-tertiary: color-mix(in srgb, ${v.text} 66%, ${v.bg});
+  --dsw-alias-label-caption: color-mix(in srgb, ${v.text} 54%, ${v.bg});
+}
+/* the very top strip takes the most light: the tabs and the first rows there
+ * get the full ink, and the tabs a tighter, darker setting than the rest */
+${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) :is([class*="_tab"], button) { color: color-mix(in srgb, ${v.text} 90%, ${v.bg}); }
+${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) :is([class*="_tab"][aria-selected="true"], [class*="_tabActive"]) { color: ${v.text}; font-weight: 500; }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
 ${v.sunTop && !v.rays ? `/* a sun at the top lights the very strip where the header tabs and the
  * first lines of the transcript sit. A veil of the page, under the content
@@ -2578,7 +2592,10 @@ ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
   background: ${joinedSky(v, dark, `100% ${v.sunTop ? '-3%' : '103%'}`, [46, 20])} !important;
 }
-${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
+${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) {
+  --dsw-alias-bg-base: ${v.bg};
+  --dsw-alias-label-secondary: ${v.dim}; --dsw-alias-label-tertiary: ${v.faint};
+}
 /* sticky bars over the transcript: only those that stick (an opened row, the
  * compaction bar) get a frosted strip; closed run-detail rows stay on the sky
  * (each row has a disclosure header, and a band under every one of them
