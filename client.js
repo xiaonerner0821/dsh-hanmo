@@ -2625,6 +2625,17 @@ ${MN} ${F} [class*="_centerCol"] {
  * get the full ink, and the tabs a tighter, darker setting than the rest */
 ${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) :is([class*="_tab"], button) { color: color-mix(in srgb, ${v.text} 90%, ${v.bg}); }
 ${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) :is([class*="_tab"][aria-selected="true"], [class*="_tabActive"]) { color: ${v.text}; font-weight: 500; }
+/* the conversation header (title, mode / agents / jobs labels, view tabs, the
+ * session tab strip) sits on the brightest band of the sky: its grey labels
+ * take the theme's ink at near-full strength, and every glyph gets a soft halo
+ * of the page tone, so they hold over ripples, sun glow and bubbles */
+${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) {
+  --dsw-alias-label-secondary: color-mix(in srgb, ${v.text} 94%, ${v.bg});
+  --dsw-alias-label-tertiary: color-mix(in srgb, ${v.text} 86%, ${v.bg});
+  --dsw-alias-label-caption: color-mix(in srgb, ${v.text} 76%, ${v.bg});
+  text-shadow: 0 0 6px ${m(v.bg, dark ? 92 : 85)}, 0 0 2px ${m(v.bg, dark ? 85 : 75)};
+}
+${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) :is([class*="_tab"], button, [class*="_count"]) { color: color-mix(in srgb, ${v.text} 90%, ${v.bg}); }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
 ${v.sunTop && !v.rays ? `/* a sun at the top lights the very strip where the header tabs and the
  * first lines of the transcript sit. A veil of the page, under the content
