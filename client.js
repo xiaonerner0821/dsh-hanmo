@@ -2646,6 +2646,10 @@ ${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) {
   text-shadow: 0 0 6px ${m(v.bg, dark ? 92 : 85)}, 0 0 2px ${m(v.bg, dark ? 85 : 75)};
 }
 ${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) :is([class*="_tab"], button, [class*="_count"]) { color: color-mix(in srgb, ${v.text} 90%, ${v.bg}); }
+/* the agent-preset label (创造模式 etc.) sits on DSH's translucent fill pill,
+ * which over a lit sky reads as a dark smudge under the text; its neighbours
+ * (agents, jobs) are bare text. Drop the pill so the row reads as one line. */
+${MN} ${F} [class*="_centerCol"] :is(header, [class*="_header"]) span[class*="_label"][title] { background: none !important; }
 /* dsh-multi-session tabs on the sky: the active tab was a solid page-colour
  * slab (bg-layer-1), a dark block over a lit sea. Make it a frosted pane of the
  * sky instead: a translucent lift of the panel tone, blurred, a hairline rim
