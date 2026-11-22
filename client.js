@@ -1974,7 +1974,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#e3eefa', dim: '#a8bfd6', faint: '#6f88a3', accent: '#4cc2ff', accent2: '#7c9cff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4cc2ff', num: '#c7a6ff', type: '#f2d28a', com: '#5f7a96', punc: '#bccde0',
           sky: [['#3e6f81', 0], ['#155b7a', 8], ['#05416e', 18], ['#03295e', 30], ['#03194e', 44], ['#03103e', 60], ['#030c30', 78], ['#030b24', 100]],
-          sun: 'rgba(200, 236, 255, .64)', sunFar: true, rays: 'rgba(212, 238, 255, .42)', rayHalf: 20,
+          sun: 'rgba(214, 242, 255, .82)', sunFar: true, rays: 'rgba(226, 244, 255, .66)', rayHalf: 20,
           waves: { kind: 'bubbles', color: '#d2e8ff', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
@@ -2079,7 +2079,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const stops = [`${z} 0deg`];
       for (const [c, w, s] of fan) stops.push(`${z} ${c - w}deg`, `${scaleA(v.rays, k * s)} ${c}deg`, `${z} ${c + w}deg`);
       stops.push(`${z} 360deg`);
-      const depth = (p) => (p <= 4 ? 0 : p >= 62 ? 100 : Math.round(((p - 4) / 58) ** 0.95 * 100));
+      const depth = (p) => (p <= 6 ? 0 : p >= 68 ? 100 : Math.round(((p - 6) / 62) ** 0.95 * 100));
       // the sun itself: a small hot core (the rest of its glow is sunGlow)
       const core = `rgba(240, 250, 255, ${(v.sunFar ? 0.5 : 0.85) * Math.min(1, k + 0.25)})`;
       return [
