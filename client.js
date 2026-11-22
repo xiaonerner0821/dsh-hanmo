@@ -2041,8 +2041,9 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
-    function skyGradient(v, alpha, sunAt, size, reach, preview) {
-      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${c} ${alpha}, transparent)`, p]);
+    function skyGradient(v, alpha, sunAt, size, reach, preview, keep) {
+      const list = v.sky.map(([c, p]) => [
+        `color-mix(in srgb, ${keep ? mixHex(c, v.bg, keep) : c} ${alpha}, transparent)`, p]);
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
       if (preview) return [sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }), baseLayer(list)].join(', ');
       return [...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
@@ -2289,23 +2290,22 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       return [...waveLayers(v, 0.5), sunGlow(v, at, sunSize(v, [70, 18]), { k: 0.6, fade: 72 }),
         ...seaDepth(v, list, at, 0.3), baseLayer(list)].join(', ');
     }
-    /** Main panel when the sidebar carries the sky too: one sky across both.
-     * The full-strength sky runs on from the sidebar's edge (same stops at the
-     * same heights, so the colours meet with no seam), and a veil of the page
-     * colour rises over it across the first ~40% of the panel to the reading
-     * strength of mainSkyGradient. The sun sits on the seam, half in each
-     * column, so the glow reads as one sun low over a single horizon. */
-    function joinedSkyGradient(v, dark) {
-      const keep = dark ? 0.5 : 0.55;
+    /** The panel read strength: how far each sky colour is folded toward the
+     * page while sidebar and main panel share one sky. Both columns take it,
+     * so the picture stays continuous across the seam (a veil on only the
+     * main panel made its shafts look cut off at the border). */
+    const READ_KEEP = (dark) => (dark ? 0.5 : 0.55);
+    /** One sky across the window: the same stops at the same heights in both
+     * columns, and the sun on the seam (half in each) with a radius that
+     * reaches the farthest corner, so the glow runs on unbroken. */
+    function joinedSky(v, dark, sunAt, size) {
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
-      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${c} ${a}, transparent)`, p]);
-      const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
-      const at = `0% ${v.sunTop ? '-3%' : '103%'}`;
+      const keep = READ_KEEP(dark);
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
       return [
-        sunGlow(v, at, sunSize(v, [46, 20]), { fade: 72, reach: JOIN_REACH }),
-        `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
         ...waveLayers(v, 1),
-        ...seaDepth(v, list, at, 0.45),
+        sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH }),
+        ...seaDepth(v, list, sunAt, 0.85),
         baseLayer(list),
       ].join(', ');
     }
@@ -2553,7 +2553,7 @@ ${MN} ${F} [class*="_centerCol"] {
   background: ${mainSkyGradient(v, dark)} !important;
 }
 ${MN}[data-cm-glass] ${F} [class*="_centerCol"]::before { background: none !important; }
-${v.sunTop ? `/* a sun at the top lights the very strip where the header tabs and the
+${v.sunTop && !v.rays ? `/* a sun at the top lights the very strip where the header tabs and the
  * first lines of the transcript sit. A veil of the page, under the content
  * (z-index -1 in an isolated column), settles the sky there to reading
  * strength: densest at the top edge, gone by ~240px. It fades in from the
@@ -2561,8 +2561,8 @@ ${v.sunTop ? `/* a sun at the top lights the very strip where the header tabs an
  * unbroken, and the dawn keeps glowing across the rest of the panel. */
 ${MN} ${F} [class*="_centerCol"] { position: relative; isolation: isolate; }
 ${MN} ${F} [class*="_centerCol"]::after {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: ${v.rays ? '100%' : '240px'}; z-index: -1; pointer-events: none;
-  background: ${v.rays ? `linear-gradient(180deg, ${m(v.bg, 76)}, ${m(v.bg, 62)} 45%, ${m(v.bg, 54)})` : `linear-gradient(180deg, ${m(v.bg, dark ? 66 : 58)}, ${m(v.bg, dark ? 40 : 34)} 42%, ${m(v.bg, 0)})`};
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 240px; z-index: -1; pointer-events: none;
+  background: linear-gradient(180deg, ${m(v.bg, dark ? 66 : 58)}, ${m(v.bg, dark ? 40 : 34)} 42%, ${m(v.bg, 0)});
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 160px); mask-image: linear-gradient(90deg, transparent, #000 160px);
 }
 /* header tabs: a faint lift of the ink so the labels hold on warm light */
@@ -2571,10 +2571,12 @@ ${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) { te
  * sky at full strength from the shared edge and veils it toward the reading
  * strength; the sidebar's sun moves onto the seam to meet the main panel's
  * half, and the hairline between the columns goes. */
-${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] { background: ${joinedSkyGradient(v, dark)} !important; }
+${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] {
+  background: ${joinedSky(v, dark, `0% ${v.sunTop ? '-3%' : '103%'}`, [46, 20])} !important;
+}
 ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
-  background: ${skyGradient(v, 'calc(var(--cm-sb-alpha, 1) * 100%)', v.sunTop ? '100% -3%' : '100% 103%', [70, 20], JOIN_REACH)} !important;
+  background: ${joinedSky(v, dark, `100% ${v.sunTop ? '-3%' : '103%'}`, [46, 20])} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) { --dsw-alias-bg-base: ${v.bg}; }
 /* sticky bars over the transcript: only those that stick (an opened row, the
