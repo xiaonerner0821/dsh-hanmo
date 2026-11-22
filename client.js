@@ -1974,14 +1974,14 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           text: '#e3eefa', dim: '#a8bfd6', faint: '#6f88a3', accent: '#4cc2ff', accent2: '#7c9cff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
           kw: '#7cb4ff', str: '#7fe0c8', fn: '#4cc2ff', num: '#c7a6ff', type: '#f2d28a', com: '#5f7a96', punc: '#bccde0',
           sky: [['#3e6f81', 0], ['#155b7a', 8], ['#05416e', 18], ['#03295e', 30], ['#03194e', 44], ['#03103e', 60], ['#030c30', 78], ['#030b24', 100]],
-          sun: 'rgba(196, 232, 255, .62)', sunFar: true, rays: 'rgba(205, 234, 255, .34)',
+          sun: 'rgba(196, 232, 255, .55)', sunFar: true, rays: 'rgba(205, 234, 255, .32)', rayHalf: 30,
           waves: { kind: 'bubbles', color: '#d2e8ff', a: 0.5 },
           haze: ['rgba(90, 220, 210, .07)', 'rgba(80, 130, 230, .06)'] },
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
           sky: [['#eefaf8', 0], ['#c8f0ea', 9], ['#9ee2dc', 22], ['#74d0d4', 40], ['#58bdcd', 60], ['#47afc8', 80], ['#3fa6c4', 100]],
-          sun: 'rgba(255, 255, 244, 1)', rays: 'rgba(255, 255, 250, .5)',
+          sun: 'rgba(255, 255, 244, .9)', rays: 'rgba(255, 255, 250, .45)', rayHalf: 30,
           waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
@@ -2065,23 +2065,25 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // near the sun's own direction and thinning toward the cone's edge.
       const rr = seeded(0x5a17);
       const fan = [];
-      let prev = 126;
+      const HALF = v.rayHalf || 31; // the cone's half-width, degrees
+      let prev = 180 - HALF - 4;
       for (;;) {
-        const w = 0.5 + rr() * 2.6, c = prev + w + 0.6 + rr() * 4.8;
-        if (c + w > 234) break;
-        const off = Math.abs(c - 180) / 56;
-        const s = Math.max(0.18, (1 - off * off) * (0.25 + Math.pow(rr(), 1.5) * 0.95));
+        const w = 0.4 + rr() * 2.1, c = prev + w + 0.5 + rr() * 3.4;
+        if (c + w > 180 + HALF + 4) break;
+        const off = Math.abs(c - 180) / HALF;
+        // strongest on the sun's own axis, thinning (not vanishing) to the rim
+        const s = Math.max(0.16, (1 - off * off * 0.85) * (0.22 + Math.pow(rr(), 1.6) * 1.05));
         fan.push([c, w, s]);
         prev = c + w;
       }
       const stops = [`${z} 0deg`];
       for (const [c, w, s] of fan) stops.push(`${z} ${c - w}deg`, `${scaleA(v.rays, k * s)} ${c}deg`, `${z} ${c + w}deg`);
       stops.push(`${z} 360deg`);
-      const depth = (p) => (p <= 8 ? 0 : p >= 80 ? 100 : Math.round(((p - 8) / 72) ** 1.15 * 100));
+      const depth = (p) => (p <= 4 ? 0 : p >= 62 ? 100 : Math.round(((p - 4) / 58) ** 0.95 * 100));
       // the sun itself: a small hot core (the rest of its glow is sunGlow)
-      const core = `rgba(255, 255, 250, ${(v.sunFar ? 0.5 : 0.85) * Math.min(1, k + 0.25)})`;
+      const core = `rgba(240, 250, 255, ${(v.sunFar ? 0.5 : 0.85) * Math.min(1, k + 0.25)})`;
       return [
-        `radial-gradient(ellipse 22% 7% at ${at}, ${core}, rgba(255, 255, 250, 0))`,
+        `radial-gradient(ellipse 15% 5% at ${at}, ${core}, rgba(240, 250, 255, 0))`,
         `linear-gradient(180deg, ${list.map(([c, p]) => `color-mix(in srgb, ${c} ${depth(p)}%, transparent) ${p}%`).join(', ')})`,
         `conic-gradient(from 0deg at ${at}, ${stops.join(', ')})`,
       ];
