@@ -1968,7 +1968,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // Dark = under the surface, looking up: sunlight breaks in at the top
       // and fans down in soft shafts, the water deepening from sunlit teal to
       // abyssal blue. Both carry a scatter of rising air bubbles.
-      { id: 'ocean', label: '海浪', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
+      { id: 'ocean', label: '深海', hint: '渐变', schemes: ['light', 'dark'], sunTop: true,
         fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
         dark: { bg: '#0d1c29', side: '#0b1824', l1: '#132636', l2: '#1a3142', l3: '#223c4f', ov: '#142838', code: '#0a1722',
           text: '#e4f1f4', dim: '#a9c3cc', faint: '#6f8c98', accent: '#4fd1c5', accent2: '#6aa8ff', ok: '#7fdca0', warn: '#f2c46d', err: '#ff7d8a',
@@ -2032,7 +2032,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         className: 'cm-ap-theme', title: `${t.label}（${modes}）`, onClick: onPick,
       },
       h('i', { className: 'cm-ap-sw', 'aria-hidden': 'true', style: {
-        '--sw-bg': v.bg, '--sw-side': v.sky ? skyGradient(v, '100%') : v.side, '--sw-rail': v.accent,
+        '--sw-bg': v.bg, '--sw-side': v.sky ? skyGradient(v, '100%', undefined, undefined, undefined, true) : v.side, '--sw-rail': v.accent,
         '--sw-fg': v.text, '--sw-a': v.kw, '--sw-b': v.fn, '--sw-c': v.str,
       } }, h('u', null), h('b', null), h('b', null), h('b', null), h('em', null, 'Aa')),
       h('span', null, t.label),
@@ -2041,9 +2041,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     /** A sky theme's sidebar gradient: zenith to horizon, every stop mixed
      * toward transparent by `alpha` (the see-through setting), with the sun's
      * glow on the lower edge. */
-    function skyGradient(v, alpha, sunAt, size, reach) {
+    function skyGradient(v, alpha, sunAt, size, reach, preview) {
       const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${c} ${alpha}, transparent)`, p]);
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
+      if (preview) return [sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }), baseLayer(list)].join(', ');
       return [...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
         ...seaDepth(v, list, at, 1), baseLayer(list)].join(', ');
     }
@@ -2057,13 +2058,29 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function seaDepth(v, list, at, k) {
       if (!v.rays) return [];
       const z = scaleA(v.rays, 0);
-      const fan = [[138, 2.2, .5], [146, 3.4, .9], [153, 1.6, .6], [161, 4.2, 1], [170, 2.4, .7], [176, 3.4, 1],
-        [186, 2.8, .8], [193, 4, 1], [202, 1.8, .6], [209, 3.6, .9], [218, 2.4, .5]];
+      // Sunlight under water (Snell's window): the sun's rays enter the surface
+      // inside a ~97deg cone and fan out from one bright point. Real shafts
+      // are uneven: many narrow rays of random width and strength, strongest
+      // near the sun's own direction and thinning toward the cone's edge.
+      const rr = seeded(0x5a17);
+      const fan = [];
+      let prev = 126;
+      for (;;) {
+        const w = 0.5 + rr() * 2.6, c = prev + w + 0.6 + rr() * 4.8;
+        if (c + w > 234) break;
+        const off = Math.abs(c - 180) / 56;
+        const s = Math.max(0.18, (1 - off * off) * (0.25 + Math.pow(rr(), 1.5) * 0.95));
+        fan.push([c, w, s]);
+        prev = c + w;
+      }
       const stops = [`${z} 0deg`];
       for (const [c, w, s] of fan) stops.push(`${z} ${c - w}deg`, `${scaleA(v.rays, k * s)} ${c}deg`, `${z} ${c + w}deg`);
       stops.push(`${z} 360deg`);
       const depth = (p) => (p <= 8 ? 0 : p >= 80 ? 100 : Math.round(((p - 8) / 72) ** 1.15 * 100));
+      // the sun itself: a small hot core (the rest of its glow is sunGlow)
+      const core = `rgba(255, 255, 250, ${(v.sunFar ? 0.5 : 0.85) * Math.min(1, k + 0.25)})`;
       return [
+        `radial-gradient(ellipse 22% 7% at ${at}, ${core}, rgba(255, 255, 250, 0))`,
         `linear-gradient(180deg, ${list.map(([c, p]) => `color-mix(in srgb, ${c} ${depth(p)}%, transparent) ${p}%`).join(', ')})`,
         `conic-gradient(from 0deg at ${at}, ${stops.join(', ')})`,
       ];
@@ -2115,7 +2132,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           body += `<use href='#${id}' x='${f1(px - rad)}' y='${f1(py - rad)}' width='${d}' height='${d}' opacity='${op(a)}'/>`;
         }
       };
-      for (let i = 0; i < 12; i++) {
+      for (let i = 0; i < 34; i++) {
         let x = r() * W, y = r() * H, rad = 0.8 + r() * 1.2;
         const n = 4 + Math.floor(r() * 9), amp = 1.5 + r() * 4, ph = r() * 6.3, drift = (r() - 0.5) * 3, base = 0.45 + r() * 0.45;
         for (let j = 0; j < n; j++) {
@@ -2123,11 +2140,11 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           y -= rad * 2 + 5 + r() * 20; x += drift; rad = Math.min(8, rad * (1.06 + r() * 0.16));
         }
       }
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 130; i++) {
         const big = r() < 0.18, rad = big ? 3 + r() * 6.5 : 0.7 + r() * 1.8;
         put(r() * W, r() * H, rad, w.a * (0.25 + r() * 0.55));
       }
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 18; i++) {
         const cx = r() * W, cy = r() * H, n = 3 + Math.floor(r() * 6);
         for (let j = 0; j < n; j++) put(cx + (r() - 0.5) * 26, cy + (r() - 0.5) * 26, 0.7 + r() * 2.6, w.a * (0.35 + r() * 0.5));
       }
@@ -2138,7 +2155,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<path d='M.52 .5 A.72 .72 0 0 1 -.08 .82' fill='none' stroke='#fff' stroke-opacity='.4' stroke-width='.08'/></symbol>`
         + `<symbol id='d' viewBox='-1 -1 2 2'><circle r='.9' fill='${c}' fill-opacity='.5'/><circle cx='-.3' cy='-.3' r='.36' fill='#fff' fill-opacity='.75'/></symbol></defs>`;
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'>${defs}${body}</svg>`;
-      return [`${svgUrl(svg)} 0 0 / ${W}px ${H}px repeat`];
+      return [`${svgUrl(svg)} 0 0 / ${W}px ${H}px repeat fixed`];
     }
     /** 沙滩: surf washing up the sand, seen from above. Built from SVG noise
      * (feTurbulence, stitched so the 1200px strip tiles seamlessly) rather
@@ -2193,7 +2210,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<g clip-path='url(#c)'><rect width='${W}' height='${H}' fill='url(#g)' filter='url(#l)'/></g>`
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a * 0.35)}' stroke-width='4' filter='url(#v3)'/>`
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a)}' stroke-width='1.5' filter='url(#v2)'/></svg>`;
-      return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x`];
+      return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x fixed`];
     }
     const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
     /** Radius that reaches every corner of the window from any point in it:
@@ -2270,7 +2287,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
       const at = `50% ${v.sunTop ? '-4%' : '104%'}`;
       return [...waveLayers(v, 0.5), sunGlow(v, at, sunSize(v, [70, 18]), { k: 0.6, fade: 72 }),
-        ...seaDepth(v, list, at, 0.55), baseLayer(list)].join(', ');
+        ...seaDepth(v, list, at, 0.3), baseLayer(list)].join(', ');
     }
     /** Main panel when the sidebar carries the sky too: one sky across both.
      * The full-strength sky runs on from the sidebar's edge (same stops at the
@@ -2285,10 +2302,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const veil = (p) => `color-mix(in srgb, ${v.bg} ${Math.round(keep * p * 100)}%, transparent)`;
       const at = `0% ${v.sunTop ? '-3%' : '103%'}`;
       return [
-        ...waveLayers(v, 0.6),
         sunGlow(v, at, sunSize(v, [46, 20]), { fade: 72, reach: JOIN_REACH }),
         `linear-gradient(90deg, ${veil(0)} 0, ${veil(0.35)} 12%, ${veil(0.75)} 26%, ${veil(1)} 42%)`,
-        ...seaDepth(v, list, at, 1),
+        ...waveLayers(v, 1),
+        ...seaDepth(v, list, at, 0.45),
         baseLayer(list),
       ].join(', ');
     }
@@ -2544,8 +2561,8 @@ ${v.sunTop ? `/* a sun at the top lights the very strip where the header tabs an
  * unbroken, and the dawn keeps glowing across the rest of the panel. */
 ${MN} ${F} [class*="_centerCol"] { position: relative; isolation: isolate; }
 ${MN} ${F} [class*="_centerCol"]::after {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 240px; z-index: -1; pointer-events: none;
-  background: linear-gradient(180deg, ${m(v.bg, dark ? 66 : 58)}, ${m(v.bg, dark ? 40 : 34)} 42%, ${m(v.bg, 0)});
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: ${v.rays ? '100%' : '240px'}; z-index: -1; pointer-events: none;
+  background: ${v.rays ? `linear-gradient(180deg, ${m(v.bg, 76)}, ${m(v.bg, 62)} 45%, ${m(v.bg, 54)})` : `linear-gradient(180deg, ${m(v.bg, dark ? 66 : 58)}, ${m(v.bg, dark ? 40 : 34)} 42%, ${m(v.bg, 0)})`};
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 160px); mask-image: linear-gradient(90deg, transparent, #000 160px);
 }
 /* header tabs: a faint lift of the ink so the labels hold on warm light */
@@ -3295,7 +3312,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       const sky = themes.sky();
       const s = t.schemes.includes(scheme) ? scheme : t.schemes[0];
       const v = skyOf(t[s] || HAN_SKY[s], s === 'dark');
-      const full = skyGradient(v, '100%');
+      const full = skyGradient(v, '100%', undefined, undefined, undefined, true);
       const soft = mainSkyGradient(v, s === 'dark').replaceAll('calc(var(--cm-main-alpha, 1) * 100%)', '100%');
       const tile = (key, label, hint) => {
         const on = !!sky[key];
