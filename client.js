@@ -1980,8 +1980,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         light: { bg: '#f7fbfc', side: '#eaf4f6', l1: '#ffffff', l2: '#eef6f8', l3: '#e0edf1', ov: '#ffffff', code: '#f1f7f9',
           text: '#14303d', dim: '#41606f', faint: '#7f99a5', accent: '#0b7f95', accent2: '#2a5fb8', ok: '#1f8a5e', warn: '#a76a00', err: '#c23a4b',
           kw: '#2a5fb8', str: '#0b7f6c', fn: '#0b7f95', num: '#7a4fc4', type: '#9a6400', com: '#8aa0aa', punc: '#35505d',
-          sky: [['#eefaf8', 0], ['#c8f0ea', 9], ['#9ee2dc', 22], ['#74d0d4', 40], ['#58bdcd', 60], ['#47afc8', 80], ['#3fa6c4', 100]],
-          sun: 'rgba(255, 255, 246, 1)', rays: 'rgba(255, 255, 252, .56)', rayHalf: 20,
+          sky: [['#e8f7f5', 0], ['#b9eae3', 9], ['#8bdad6', 22], ['#63c5cc', 40], ['#4bafc2', 60], ['#3ba0bd', 80], ['#3397ba', 100]],
+          sun: 'rgba(255, 255, 248, 1)', rays: 'rgba(255, 255, 252, .78)', rayHalf: 20,
           waves: { kind: 'bubbles', color: '#ffffff', a: 0.78 },
           haze: ['rgba(120, 220, 225, .08)', 'rgba(60, 120, 200, .06)'] } },
       // 沙滩: a sunny beach seen from the shore, top to bottom — the sun high
@@ -2047,7 +2047,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
       if (preview) return [sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }), baseLayer(list)].join(', ');
       return [...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
-        ...seaDepth(v, list, at, 1), baseLayer(list)].join(', ');
+        ...seaDepth(v, list, at, 1, false), baseLayer(list)].join(', ');
     }
     const baseLayer = (list) => `linear-gradient(180deg, ${list.map(([c, p]) => `${c} ${p}%`).join(', ')})`;
     const svgUrl = (s) => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
@@ -2056,37 +2056,71 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * Over them sits a copy of the base gradient that turns opaque with
      * depth, so the shafts fade out as the water deepens instead of ending
      * on an edge. */
-    function seaDepth(v, list, at, k) {
+    function seaDepth(v, list, at, k, shared) {
       if (!v.rays) return [];
-      const z = scaleA(v.rays, 0);
-      // Sunlight under water (Snell's window): the sun's rays enter the surface
-      // inside a ~97deg cone and fan out from one bright point. Real shafts
-      // are uneven: many narrow rays of random width and strength, strongest
-      // near the sun's own direction and thinning toward the cone's edge.
-      const rr = seeded(0x5a17);
-      const fan = [];
-      const HALF = v.rayHalf || 31; // the cone's half-width, degrees
-      let prev = 180 - HALF - 4;
-      for (;;) {
-        const w = 0.35 + rr() * 1.7, c = prev + w + 0.4 + rr() * 2.6;
-        if (c + w > 180 + HALF + 4) break;
-        const off = Math.abs(c - 180) / HALF;
-        // strongest on the sun's own axis, thinning (not vanishing) to the rim
-        const s = Math.max(0.16, (1 - off * off * 0.85) * (0.22 + Math.pow(rr(), 1.6) * 1.05));
-        fan.push([c, w, s]);
-        prev = c + w;
-      }
-      const stops = [`${z} 0deg`];
-      for (const [c, w, s] of fan) stops.push(`${z} ${c - w}deg`, `${scaleA(v.rays, k * s)} ${c}deg`, `${z} ${c + w}deg`);
-      stops.push(`${z} 360deg`);
       const depth = (p) => (p <= 6 ? 0 : p >= 68 ? 100 : Math.round(((p - 6) / 62) ** 0.95 * 100));
-      // the sun itself: a small hot core (the rest of its glow is sunGlow)
-      const core = `rgba(240, 250, 255, ${(v.sunFar ? 0.5 : 0.85) * Math.min(1, k + 0.25)})`;
+      // shared (sidebar + main panel): the image is pinned to the viewport, so
+      // both columns are lit by the same sun and the shafts run across the
+      // seam. Alone: centred on the column, scaled to its height.
+      const place = shared ? '0 0 / 100vw 100vh fixed' : 'center top / 2400px 100% no-repeat';
       return [
-        `radial-gradient(ellipse 15% 5% at ${at}, ${core}, rgba(240, 250, 255, 0))`,
         `linear-gradient(180deg, ${list.map(([c, p]) => `color-mix(in srgb, ${c} ${depth(p)}%, transparent) ${p}%`).join(', ')})`,
-        `conic-gradient(from 0deg at ${at}, ${stops.join(', ')})`,
+        `${svgUrl(lightSvg(v, k))} ${place}`,
       ];
+    }
+    const lightCache = new Map();
+    /** Sunlight seen from under the water, drawn as one SVG so it can be soft:
+     *  - the surface overhead: a bright, rippled patch where the sun's light
+     *    comes through (Snell's window), its ripples a thresholded noise net
+     *    (the caustic pattern a wavy surface throws), fading sideways;
+     *  - god rays: shafts leaving that patch from many points (not one), each
+     *    leaning toward the sun's direction a little differently, of random
+     *    width, length and strength, weighted toward the centre by a
+     *    forward-scattering phase (Henyey-Greenstein, g = 0.7), and dimming
+     *    with depth along the Beer-Lambert curve exp(-sigma * d). Thin shafts
+     *    and broad soft ones are blurred separately, so no shaft has a hard
+     *    edge. The image is 2400 wide and stretched to the column height. */
+    function lightSvg(v, k) {
+      const key = `${v.rays}|${v.rayHalf}|${k}`;
+      if (lightCache.has(key)) return lightCache.get(key);
+      const r = seeded(0x1d7a), W = 2400, H = 1400, cx = W / 2;
+      const m = /rgba?\(([^)]+)\)/.exec(v.rays);
+      const [cr, cg, cb, ca = 1] = m[1].split(',').map(Number);
+      const col = `rgb(${cr},${cg},${cb})`, A = ca * k;
+      const half = ((v.rayHalf || 20) * Math.PI) / 180;
+      const g = 0.7, hg = (th) => (1 - g * g) / Math.pow(1 + g * g - 2 * g * Math.cos(th), 1.5), h0 = hg(0);
+      const ray = (thin) => {
+        const sx = cx + (r() * 2 - 1) * (thin ? 260 : 200);
+        const lean = (sx - cx) / 900 + (r() * 2 - 1) * half * 0.55;
+        const ang = Math.max(-half * 1.3, Math.min(half * 1.3, lean));
+        const len = H * (thin ? 0.35 + r() * 0.5 : 0.5 + r() * 0.45);
+        const w0 = thin ? 2 + r() * 7 : 14 + r() * 26, w1 = thin ? 8 + r() * 30 : 60 + r() * 120;
+        const dx = Math.sin(ang), dy = Math.cos(ang), px = dy, py = -dx;
+        const ex = sx + dx * len, ey = dy * len;
+        const pts = [sx + px * w0, py * w0, ex + px * w1, ey + py * w1, ex - px * w1, ey - py * w1, sx - px * w0, -py * w0];
+        const o = A * Math.pow(hg(ang * 1.6) / h0, 0.45) * (thin ? 0.35 + Math.pow(r(), 1.4) * 0.85 : 0.18 + r() * 0.3);
+        return `<polygon points='${pts.map(f1).join(' ')}' fill-opacity='${o.toFixed(3)}'/>`;
+      };
+      let thin = '', broad = '';
+      for (let i = 0; i < 46; i++) thin += ray(true);
+      for (let i = 0; i < 9; i++) broad += ray(false);
+      // Beer-Lambert falloff with depth for every shaft
+      const fall = [0, 0.1, 0.22, 0.38, 0.56, 0.78, 1].map((y) => `<stop offset='${y}' stop-color='${col}' stop-opacity='${Math.exp(-3.1 * y).toFixed(3)}'/>`).join('');
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${W} ${H}' preserveAspectRatio='none' width='${W}' height='${H}'><defs>`
+        + `<linearGradient id='d' gradientUnits='userSpaceOnUse' x1='0' y1='0' x2='0' y2='${H}'>${fall}</linearGradient>`
+        + `<radialGradient id='w' cx='${cx}' cy='0' r='560' gradientUnits='userSpaceOnUse' gradientTransform='translate(${cx} 0) scale(1 .22) translate(-${cx} 0)'>`
+        + `<stop offset='0' stop-color='${col}' stop-opacity='${Math.min(1, A * 1.5).toFixed(3)}'/><stop offset='.45' stop-color='${col}' stop-opacity='${(A * 0.75).toFixed(3)}'/>`
+        + `<stop offset='1' stop-color='${col}' stop-opacity='0'/></radialGradient>`
+        + `<filter id='b1' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='4.5 3'/></filter>`
+        + `<filter id='b2' x='-20%' y='-5%' width='140%' height='110%'><feGaussianBlur stdDeviation='22 10'/></filter>`
+        + `<filter id='c' x='0' y='0' width='100%' height='100%'><feTurbulence type='turbulence' baseFrequency='0.011 0.05' numOctaves='2' seed='4' result='t'/>`
+        + `<feColorMatrix in='t' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -5 0 0 0 1.35' result='a'/>`
+        + `<feComposite in='SourceGraphic' in2='a' operator='in'/><feGaussianBlur stdDeviation='1.2'/></filter></defs>`
+        + `<g fill='url(#d)' filter='url(#b2)'>${broad}</g><g fill='url(#d)' filter='url(#b1)'>${thin}</g>`
+        + `<rect x='${cx - 760}' y='0' width='1520' height='150' fill='url(#w)' opacity='.55' filter='url(#b2)'/>`
+        + `<rect x='${cx - 760}' y='0' width='1520' height='150' fill='url(#w)' filter='url(#c)'/></svg>`;
+      lightCache.set(key, svg);
+      return svg;
     }
     /** The wave texture of a sea theme (v.waves), as background layers:
      * 'bubbles' = rising air bubbles (bubbleLayers); 'foam' = the surf
@@ -2307,7 +2341,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       return [
         ...waveLayers(v, 1),
         sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH, k: dark ? 0.72 : 1 }),
-        ...seaDepth(v, list, sunAt, dark ? 0.72 : 0.9),
+        ...seaDepth(v, list, sunAt, dark ? 0.72 : 0.9, true),
         baseLayer(list),
       ].join(', ');
     }
