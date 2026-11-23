@@ -841,6 +841,10 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
 body[data-cm-weight] ${F} [class*="_centerCol"] :is([class*="_crumb"], [class*="_crumbCurrent"]) {
   font-weight: min(900, calc(var(--cm-w-text, 400) + 100));
 }
+/* the goal bar over the composer: label one step above the objective, both
+ * from the body weight (DSH pinned the label at 500 whatever the body was) */
+body[data-cm-weight] ${F} [data-goal-bar] [class*="_label"] { font-weight: min(900, calc(var(--cm-w-text, 400) + 100)); }
+body[data-cm-weight] ${F} [data-goal-bar] [class*="_objective"] { font-weight: var(--cm-w-text, 400); }
 /* run-detail rows: DSH pins the verb ("运行命令", "读取", "写入") at 400 (cordis
  * tools at 500) while the target beside it and some verbs without a weight of
  * their own ("上下文注入") inherit the chosen one, so one list mixed two
@@ -2813,17 +2817,49 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
      * Folded, the bar shrinks to a pill (icon + label + unfold) and keeps the
      * objective in its tooltip; a click anywhere on the pill unfolds it. */
     const GOAL_FOLD_KEY = 'hanmo:goalFolded';
+    // folded look: 'line' (a hairline in the bar's place) or 'pill'
+    const GOAL_FOLD_STYLE = 'line';
     const GOAL_FOLD_CSS = `
-.cm-goal-fold { transition: transform .2s ease, background-color .15s, color .15s; }
 .cm-goal-fold svg { display: block; transition: transform .22s ease; }
 body[data-cm-goal-folded] .cm-goal-fold svg { transform: rotate(180deg); }
-body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) {
-  width: auto; max-width: max-content; margin-left: 0; gap: 6px; padding-left: 10px; cursor: pointer;
+/* --- line: the bar keeps its width and centring (so it sits over the composer),
+ * collapses to a 3px rule in the theme accent that fades at both ends; a taller
+ * invisible strip around it takes the hover and the click; the objective stays
+ * in the bar's tooltip */
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) {
+  height: 3px; min-height: 0; padding: 0; gap: 0; border-radius: 999px; box-shadow: none; cursor: pointer;
+  margin-top: 6px; margin-bottom: 6px; transition: height .18s ease;
 }
-body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_objective"],
-body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_error"],
-body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] > :not(.cm-goal-fold) { display: none !important; }
-body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] { gap: 0; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])::before {
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cm-accent, var(--dsw-alias-brand-primary)) 70%, transparent) 18%,
+    color-mix(in srgb, var(--cm-accent, var(--dsw-alias-brand-primary)) 70%, transparent) 82%, transparent);
+  backdrop-filter: none; opacity: .75; transition: opacity .18s ease;
+}
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])::after {
+  content: ""; position: absolute; left: 0; right: 0; top: -9px; bottom: -9px;
+}
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]):hover { height: 4px; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]):hover::before { opacity: 1; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > :not([class*="_actions"]),
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] [class*="_actions"] > :not(.cm-goal-fold) { display: none !important; }
+/* the unfold button stays reachable from the keyboard: invisible until focused */
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] [data-goal-bar] [class*="_actions"] {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%); z-index: 1;
+}
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] .cm-goal-fold { opacity: 0; width: 22px; height: 22px; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="line"] .cm-goal-fold:focus-visible { opacity: 1; }
+/* --- pill: icon + label + unfold, left-aligned with the open bar's left edge */
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) {
+  background: none; box-shadow: none; padding: 0; cursor: pointer;
+}
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])::before {
+  right: auto; width: var(--cm-pill-w, 160px); box-shadow: var(--dsw-elevation-panel);
+}
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_goalGlyph"] { margin-left: 12px; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_objective"],
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_error"],
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] [class*="_actions"] > :not(.cm-goal-fold) { display: none !important; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] [class*="_actions"] { gap: 0; margin-right: auto; }
 `;
     function goalFold() {
       const zh = () => (document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('zh');
@@ -2831,6 +2867,12 @@ body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] { gap: 0; }
       const label = () => (isFolded() ? (zh() ? '展开目标' : 'Expand goal') : (zh() ? '折叠目标' : 'Collapse goal'));
       const paint = () => {
         document.body.toggleAttribute('data-cm-goal-folded', isFolded());
+        document.body.setAttribute('data-cm-goal-fold-style', GOAL_FOLD_STYLE);
+        // the pill's backdrop is sized to its contents (icon + label + button)
+        if (GOAL_FOLD_STYLE === 'pill') for (const bar of document.querySelectorAll('[data-goal-bar] > [class*="_bar"]')) {
+          const a = bar.querySelector('[class*="_actions"]');
+          if (a) bar.style.setProperty('--cm-pill-w', `${Math.ceil(a.getBoundingClientRect().right - bar.getBoundingClientRect().left + 6)}px`);
+        }
         for (const b of document.querySelectorAll('.cm-goal-fold')) { b.setAttribute('aria-label', label()); b.title = label(); b.setAttribute('aria-expanded', String(!isFolded())); }
       };
       const set = (v) => { try { localStorage.setItem(GOAL_FOLD_KEY, v ? '1' : '0'); } catch { /* private mode */ } paint(); };
@@ -2869,6 +2911,7 @@ body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] { gap: 0; }
         window.removeEventListener('storage', onStorage);
         for (const b of document.querySelectorAll('.cm-goal-fold')) b.remove();
         document.body.removeAttribute('data-cm-goal-folded');
+        document.body.removeAttribute('data-cm-goal-fold-style');
         css.remove();
       };
     }
