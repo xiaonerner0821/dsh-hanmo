@@ -4,7 +4,7 @@
 
 [English](./README.md)
 
-![翰墨依次换成落日、朝阳、深海三套天空主题，「新会话」按钮上带彗星光效](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/hanmo.gif)
+![翰墨依次换成落日、朝阳、深海、沙滩四套天空主题，「新会话」按钮上带彗星光效](https://raw.githubusercontent.com/xiaonerner0821/dsh-hanmo/main/docs/hanmo.gif)
 
 完整宣传片（33 秒）：[hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-hanmo/releases/download/v1.4.0/hanmo-daynight.mp4)
 
