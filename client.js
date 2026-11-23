@@ -841,6 +841,15 @@ body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font
 body[data-cm-weight] ${F} [class*="_centerCol"] :is([class*="_crumb"], [class*="_crumbCurrent"]) {
   font-weight: min(900, calc(var(--cm-w-text, 400) + 100));
 }
+/* the queued-message strip over the composer (scheduled reminders, messages
+ * sent while a turn runs): DSH sets its text in Inter ahead of the chosen font
+ * and through the font shorthand (weight reset to 400), so it skipped both
+ * the text font and the body weight */
+body:not([data-hanmo-native]) ${F} [data-queue-dock] :is([class*="_preview"], [class*="_count"], [class*="_status"], [class*="_fileName"]) {
+  font-family: var(--dsw-font-family);
+}
+body[data-cm-weight] ${F} [data-queue-dock] :is([class*="_preview"], [class*="_status"]) { font-weight: var(--cm-w-text, 400); }
+body[data-cm-weight] ${F} [data-queue-dock] [class*="_count"] { font-weight: min(900, calc(var(--cm-w-text, 400) + 100)); }
 /* the goal bar over the composer: label one step above the objective, both
  * from the body weight (DSH pinned the label at 500 whatever the body was) */
 body[data-cm-weight] ${F} [data-goal-bar] [class*="_label"] { font-weight: min(900, calc(var(--cm-w-text, 400) + 100)); }
@@ -2918,6 +2927,72 @@ body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] [class
         for (const b of document.querySelectorAll('.cm-goal-fold')) b.remove();
         document.body.removeAttribute('data-cm-goal-folded');
         document.body.removeAttribute('data-cm-goal-fold-style');
+        css.remove();
+      };
+    }
+    /** A fold button on each queued message (the strip over the composer that
+     * holds scheduled reminders and messages sent while a turn runs). A long
+     * message wraps to several lines there; folded, it is one line with an
+     * ellipsis and the full text in its tooltip. Same pattern as goalFold. */
+    const QUEUE_FOLD_KEY = 'hanmo:queueFolded';
+    const QUEUE_FOLD_CSS = `
+.cm-queue-fold svg { display: block; transition: transform .22s ease; }
+body[data-cm-queue-folded] .cm-queue-fold svg { transform: rotate(180deg); }
+body[data-cm-queue-folded] [data-queue-dock] [class*="_row"] [class*="_preview"] {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; line-clamp: 1;
+  overflow: hidden; word-break: break-all; cursor: pointer;
+}
+`;
+    function queueFold() {
+      const zh = () => (document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('zh');
+      const isFolded = () => { try { return localStorage.getItem(QUEUE_FOLD_KEY) === '1'; } catch { return false; } };
+      const label = () => (isFolded() ? (zh() ? '展开消息' : 'Expand message') : (zh() ? '折叠消息' : 'Collapse message'));
+      const paint = () => {
+        const f = isFolded();
+        document.body.toggleAttribute('data-cm-queue-folded', f);
+        for (const b of document.querySelectorAll('.cm-queue-fold')) { b.setAttribute('aria-label', label()); b.title = label(); b.setAttribute('aria-expanded', String(!f)); }
+        for (const pv of document.querySelectorAll('[data-queue-dock] [class*="_row"] [class*="_preview"]')) {
+          if (f) pv.title = pv.textContent || ''; else pv.removeAttribute('title');
+        }
+      };
+      const set = (v) => { try { localStorage.setItem(QUEUE_FOLD_KEY, v ? '1' : '0'); } catch { /* private mode */ } paint(); };
+      const svg = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const mount = () => {
+        for (const row of document.querySelectorAll('[data-queue-dock] [class*="_row"]')) {
+          const actions = row.querySelector('[class*="_actions"]');
+          if (!actions || actions.querySelector('.cm-queue-fold')) continue;
+          // an editing row has its own save / cancel buttons: leave it alone
+          if (row.querySelector('textarea, [contenteditable="true"]')) continue;
+          const ref = actions.querySelector('button');
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = (ref ? ref.className + ' ' : '') + 'cm-queue-fold';
+          b.innerHTML = svg;
+          b.addEventListener('click', (e) => { e.stopPropagation(); set(!isFolded()); });
+          actions.append(b);
+          const pv = row.querySelector('[class*="_preview"]');
+          if (pv && !pv.dataset.cmFoldWired) {
+            pv.dataset.cmFoldWired = '1';
+            pv.addEventListener('click', () => { if (isFolded()) set(false); });
+          }
+        }
+        paint();
+      };
+      const css = document.createElement('style');
+      css.dataset.plugin = '@xiaonerner0821/dsh-hanmo:queue-fold';
+      css.textContent = QUEUE_FOLD_CSS;
+      document.head.append(css);
+      let raf = 0;
+      const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; mount(); }); });
+      mo.observe(document.body, { childList: true, subtree: true });
+      const onStorage = (e) => { if (e.key === QUEUE_FOLD_KEY) paint(); };
+      window.addEventListener('storage', onStorage);
+      mount();
+      return () => {
+        mo.disconnect(); if (raf) cancelAnimationFrame(raf);
+        window.removeEventListener('storage', onStorage);
+        for (const b of document.querySelectorAll('.cm-queue-fold')) b.remove();
+        document.body.removeAttribute('data-cm-queue-folded');
         css.remove();
       };
     }
@@ -5255,6 +5330,7 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
         // (goal icon + "目标"), the objective still in its tooltip; the choice is
         // remembered across sessions and tabs
         ctx.effect(() => goalFold(), 'hanmo: goal bar fold');
+        ctx.effect(() => queueFold(), 'hanmo: queued message fold');
 
         // keep every tab on the same look: a change in one tab is stored, and the
         // others adopt it on the storage event (same browser, same origin)
