@@ -2004,6 +2004,27 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           sky: [['#bfe2f6', 0], ['#d8eff8', 20], ['#a6e0e3', 38], ['#84d0d5', 50], ['#9fdcd8', 54], ['#c5ebe2', 58], ['#dccaa0', 61], ['#f0e0bf', 68], ['#eed8aa', 100]],
           waves: { kind: 'foam', color: '#ffffff', a: 0.92, at: 59, shade: 'rgba(120, 92, 44, .18)' },
           sun: 'rgba(255, 238, 160, .95)', haze: ['rgba(255, 230, 150, .1)', 'rgba(240, 200, 130, .08)'] } },
+      // 晚霞: the afterglow, half an hour after the sun has gone. From the
+      // reference photos the sky bands are clear: lavender overhead, violet
+      // through rose in the middle, coral and peach low down, and a pale warm
+      // glow still sitting on the horizon. The sun itself is out of sight, so
+      // its light is a broad low wash rather than a disc. Light = the afterglow
+      // as the eye sees it; dark = the same sky a little later, indigo overhead
+      // with an ember band low down. Rose accent, periwinkle second accent.
+      { id: 'dusk', label: '晚霞', hint: '渐变', schemes: ['light', 'dark'],
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        dark: { bg: '#151026', side: '#130e22', l1: '#1e1733', l2: '#28203f', l3: '#332a4c', ov: '#1f1835', code: '#120d20',
+          text: '#f2e8f2', dim: '#c8b6cf', faint: '#8d7d9b', accent: '#ef8fb6', accent2: '#9db4ff', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff7b8f',
+          kw: '#ff9ec4', str: '#ffc9a3', fn: '#ef8fb6', num: '#b9a6ff', type: '#ffd9a8', com: '#7a6d8a', punc: '#cfc2d6',
+          sky: [['#221a44', 0], ['#33215a', 14], ['#4d2563', 30], ['#6d2b66', 46], ['#8f3463', 62], ['#ae435c', 78], ['#c95a55', 92], ['#d8724f', 100]],
+          sun: 'rgba(255, 176, 132, .5)', haze: ['rgba(120, 110, 230, .07)', 'rgba(255, 128, 96, .09)'],
+          waves: { kind: 'clouds', color: '#ff9f8c', shade: '#3a2752', a: 0.55 }, readKeep: 0.42 },
+        light: { bg: '#fdf5f4', side: '#f7ebf0', l1: '#ffffff', l2: '#fbf0f4', l3: '#f2e2e9', ov: '#ffffff', code: '#fbf4f5',
+          text: '#33203a', dim: '#6b5273', faint: '#9b859f', accent: '#c04a86', accent2: '#5a5fc0', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
+          kw: '#c2418d', str: '#b0621a', fn: '#c04a86', num: '#5a5fc0', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
+          sky: [['#a9a6dd', 0], ['#bba2d6', 13], ['#cf9fc6', 27], ['#e2a0b4', 42], ['#f0a9a2', 57], ['#f8bb9d', 72], ['#fcd2ac', 87], ['#fde3c4', 100]],
+          sun: 'rgba(255, 214, 168, .8)', haze: ['rgba(150, 130, 225, .07)', 'rgba(255, 150, 120, .09)'],
+          waves: { kind: 'clouds', color: '#ffd3c2', shade: '#9b8ccb', a: 0.6 }, readKeep: 0.2 } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2138,7 +2159,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     }
     /** The wave texture of a sea theme (v.waves), as background layers:
      * 'bubbles' = rising air bubbles (bubbleLayers); 'foam' = the surf
-     * washing up the sand (foamLayers). Both are seeded-random, so every crest has
+     * washing up the sand (foamLayers); 'clouds' = banded cloud streaks
+     * (cloudLayers). Both are seeded-random, so every crest has
      * its own shape. `k` scales the strength (softer on the main panel,
      * where text sits on it). */
     /** Seeded PRNG (mulberry32): random-looking waves that come out the same
@@ -2159,7 +2181,8 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const w = v.waves;
       if (!w) return [];
       const key = `${w.kind}|${w.color}|${w.a}|${w.at}|${w.shade}|${k}`;
-      if (!waveCache.has(key)) waveCache.set(key, w.kind === 'bubbles' ? bubbleLayers(w, k) : foamLayers(w, k));
+      if (!waveCache.has(key)) waveCache.set(key, w.kind === 'bubbles' ? bubbleLayers(w, k)
+        : w.kind === 'clouds' ? cloudLayers(w, k) : foamLayers(w, k));
       return waveCache.get(key);
     }
     /** 海浪: air bubbles in the water. A dozen rising trails (bubbles that
@@ -2262,6 +2285,40 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a * 0.35)}' stroke-width='4' filter='url(#v3)'/>`
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a)}' stroke-width='1.5' filter='url(#v2)'/></svg>`;
       return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x fixed`];
+    }
+    /** 晚霞: the banded clouds of an afterglow. Long soft streaks at uneven
+     * heights: each is a lens shape of random length, thickness and tilt with
+     * a lighter core, edges broken by noise and eased by a blur, so none reads
+     * as an ellipse. Built once at 1600x900 and repeated; a streak crossing the
+     * right edge is drawn again one tile to the left, so the tile joins. */
+    function cloudLayers(w, k) {
+      const r = seeded(0xc10d5), W = 1600, H = 900, c = w.color;
+      const op = (x) => Math.min(1, x * k).toFixed(3);
+      const sh = w.shade || c;
+      // the body in the cloud's shadow tone, its underside lit by the sun below the horizon
+      const streak = (x, y, L, T, tilt, a) => `<g transform='translate(${f1(x)} ${f1(y)}) rotate(${f1(tilt)})'>`
+        + `<ellipse cy='${f1(-T * 0.12)}' rx='${f1(L / 2)}' ry='${f1(T / 2)}' fill='${sh}' fill-opacity='${op(a * 0.75)}'/>`
+        + `<ellipse cx='${f1(L * 0.05)}' cy='${f1(T * 0.26)}' rx='${f1(L * 0.4)}' ry='${f1(T * 0.2)}' fill='${c}' fill-opacity='${op(a * 0.95)}'/></g>`;
+      let body = '';
+      for (let y = 40 + r() * 30; y < H; y += 60 + r() * 140) {
+        let x = -120 + r() * 160;
+        while (x < W) {
+          const L = 180 + r() * 620, T = 10 + r() * 46;
+          const tilt = (r() - 0.5) * 6;                       // degrees
+          const a = w.a * (0.25 + r() * 0.75);
+          const s = streak(x, y, L, T, tilt, a);
+          body += s;
+          if (x + L > W) body += `<g transform='translate(-${W} 0)'>${streak(x, y, L, T, tilt, a)}</g>`;
+          x += L * (0.55 + r() * 0.6);
+        }
+      }
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>`
+        + `<filter id='cb' x='-10%' y='-120%' width='120%' height='340%'>`
+        + `<feTurbulence type='fractalNoise' baseFrequency='0.004 0.03' numOctaves='2' seed='6' result='t'/>`
+        + `<feDisplacementMap in='SourceGraphic' in2='t' scale='64' xChannelSelector='R' yChannelSelector='G'/>`
+        + `<feGaussianBlur stdDeviation='9 4'/></filter></defs>`
+        + `<g filter='url(#cb)'>${body}</g></svg>`;
+      return [`${svgUrl(svg)} 0 0 / ${W}px ${H}px repeat fixed`];
     }
     const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
     /** Radius that reaches every corner of the window from any point in it:
@@ -2728,7 +2785,7 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     }
     /** Where the sky goes by default: 落日 and 朝阳 are one sky over the whole
      * window (sidebar and main panel joined), every other theme starts plain. */
-    const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach']);
+    const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach', 'dusk']);
     const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
 
     const WP_KEY = 'hanmo:wallpaper';
