@@ -2857,6 +2857,10 @@ body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [cla
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])::before {
   right: auto; width: var(--cm-pill-w, 160px); box-shadow: var(--dsw-elevation-panel);
 }
+/* the open bar is top-aligned (so a long objective can wrap): the pill is one
+ * line, so centre it again and drop the per-item top offsets */
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) { height: 36px; min-height: 36px; align-items: center; }
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > :is([class*="_goalGlyph"], [class*="_label"], [class*="_actions"]) { margin-top: 0; align-self: center; }
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_goalGlyph"] { margin-left: 12px; }
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_objective"],
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_error"],
