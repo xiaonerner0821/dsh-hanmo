@@ -2013,18 +2013,18 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // with an ember band low down. Rose accent, periwinkle second accent.
       { id: 'dusk', label: '晚霞', hint: '渐变', schemes: ['light', 'dark'],
         fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
-        dark: { bg: '#151026', side: '#130e22', l1: '#1e1733', l2: '#28203f', l3: '#332a4c', ov: '#1f1835', code: '#120d20',
+        dark: { bg: '#1a0d24', side: '#170b20', l1: '#251431', l2: '#2f1a3d', l3: '#3a2148', ov: '#26152f', code: '#150a1e',
           text: '#f2e8f2', dim: '#c8b6cf', faint: '#8d7d9b', accent: '#ef8fb6', accent2: '#9db4ff', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff7b8f',
           kw: '#ff9ec4', str: '#ffc9a3', fn: '#ef8fb6', num: '#b9a6ff', type: '#ffd9a8', com: '#7a6d8a', punc: '#cfc2d6',
-          sky: [['#221a44', 0], ['#33215a', 14], ['#4d2563', 30], ['#6d2b66', 46], ['#8f3463', 62], ['#ae435c', 78], ['#c95a55', 92], ['#d8724f', 100]],
-          sun: 'rgba(255, 176, 132, .5)', haze: ['rgba(120, 110, 230, .07)', 'rgba(255, 128, 96, .09)'],
-          waves: { kind: 'clouds', color: '#ff9f8c', shade: '#3a2752', a: 0.55 }, readKeep: 0.42 },
+          sky: [['#3f1149', 0], ['#571459', 12], ['#74176a', 24], ['#931d7c', 36], ['#ae2886', 48], ['#c13588', 60], ['#cc487f', 74], ['#d4636f', 88], ['#d97a63', 100]],
+          sun: 'rgba(255, 150, 140, .42)', haze: ['rgba(170, 70, 200, .08)', 'rgba(255, 110, 120, .09)'],
+          waves: { kind: 'clouds', color: '#ff9ec2', shade: '#33103c', a: 0.6, seed: 11 }, readKeep: 0.5 },
         light: { bg: '#fdf5f4', side: '#f7ebf0', l1: '#ffffff', l2: '#fbf0f4', l3: '#f2e2e9', ov: '#ffffff', code: '#fbf4f5',
           text: '#33203a', dim: '#6b5273', faint: '#9b859f', accent: '#c04a86', accent2: '#5a5fc0', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
           kw: '#c2418d', str: '#b0621a', fn: '#c04a86', num: '#5a5fc0', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
           sky: [['#a9a6dd', 0], ['#bba2d6', 13], ['#cf9fc6', 27], ['#e2a0b4', 42], ['#f0a9a2', 57], ['#f8bb9d', 72], ['#fcd2ac', 87], ['#fde3c4', 100]],
           sun: 'rgba(255, 214, 168, .8)', haze: ['rgba(150, 130, 225, .07)', 'rgba(255, 150, 120, .09)'],
-          waves: { kind: 'clouds', color: '#ffd3c2', shade: '#9b8ccb', a: 0.6 }, readKeep: 0.2 } },
+          waves: { kind: 'clouds', color: '#ffe0d2', shade: '#9c8acd', a: 0.78 }, readKeep: 0.2 } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2286,39 +2286,38 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a)}' stroke-width='1.5' filter='url(#v2)'/></svg>`;
       return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x fixed`];
     }
-    /** 晚霞: the banded clouds of an afterglow. Long soft streaks at uneven
-     * heights: each is a lens shape of random length, thickness and tilt with
-     * a lighter core, edges broken by noise and eased by a blur, so none reads
-     * as an ellipse. Built once at 1600x900 and repeated; a streak crossing the
-     * right edge is drawn again one tile to the left, so the tile joins. */
+    /** 晚霞: the clouds of an afterglow, after the reference photos: a broken
+     * field of soft clumps (altocumulus, a "mackerel sky"), sparse overhead and
+     * thickening toward the horizon. Built from fractal noise, stretched
+     * sideways and thresholded into clumps with soft edges, so no two are alike
+     * and none has a drawn outline. Each clump is lit from below (the sun is
+     * under the horizon): the warm lit layer is the clump itself, and the
+     * shadowed body is the same clump lifted a few pixels on top, so only a
+     * thin glowing underside shows. One image across the whole window (no
+     * repeat), so there is no tile seam and the clumps keep their size. */
     function cloudLayers(w, k) {
-      const r = seeded(0xc10d5), W = 1600, H = 900, c = w.color;
-      const op = (x) => Math.min(1, x * k).toFixed(3);
-      const sh = w.shade || c;
-      // the body in the cloud's shadow tone, its underside lit by the sun below the horizon
-      const streak = (x, y, L, T, tilt, a) => `<g transform='translate(${f1(x)} ${f1(y)}) rotate(${f1(tilt)})'>`
-        + `<ellipse cy='${f1(-T * 0.12)}' rx='${f1(L / 2)}' ry='${f1(T / 2)}' fill='${sh}' fill-opacity='${op(a * 0.75)}'/>`
-        + `<ellipse cx='${f1(L * 0.05)}' cy='${f1(T * 0.26)}' rx='${f1(L * 0.4)}' ry='${f1(T * 0.2)}' fill='${c}' fill-opacity='${op(a * 0.95)}'/></g>`;
-      let body = '';
-      for (let y = 40 + r() * 30; y < H; y += 60 + r() * 140) {
-        let x = -120 + r() * 160;
-        while (x < W) {
-          const L = 180 + r() * 620, T = 10 + r() * 46;
-          const tilt = (r() - 0.5) * 6;                       // degrees
-          const a = w.a * (0.25 + r() * 0.75);
-          const s = streak(x, y, L, T, tilt, a);
-          body += s;
-          if (x + L > W) body += `<g transform='translate(-${W} 0)'>${streak(x, y, L, T, tilt, a)}</g>`;
-          x += L * (0.55 + r() * 0.6);
-        }
-      }
+      const W = 1200, H = 800, sh = w.shade || w.color;
+      const A = Math.min(1, w.a * k);
+      // a soft ramp (density grows with the noise, no hard outline), blurred with
+      // edgeMode wrap so the stitched tile has no seam
+      const field = (id, dy, blur, gain, cut) => `<filter id='${id}' filterUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'>`
+        + `<feTurbulence type='fractalNoise' baseFrequency='0.009 0.026' numOctaves='5' seed='${w.seed || 3}' stitchTiles='stitch' result='n'/>`
+        + `<feColorMatrix in='n' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 ${gain} 0 0 0 ${cut}' result='a'/>`
+        + `<feGaussianBlur in='a' stdDeviation='${blur}' edgeMode='wrap' result='b'/>`
+        + (dy ? `<feOffset in='b' dy='${dy}' result='b2'/><feTile in='b2' result='b3'/>` : '')
+        + `<feComposite in='SourceGraphic' in2='${dy ? 'b3' : 'b'}' operator='in'/></filter>`;
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>`
-        + `<filter id='cb' x='-10%' y='-120%' width='120%' height='340%'>`
-        + `<feTurbulence type='fractalNoise' baseFrequency='0.004 0.03' numOctaves='2' seed='6' result='t'/>`
-        + `<feDisplacementMap in='SourceGraphic' in2='t' scale='64' xChannelSelector='R' yChannelSelector='G'/>`
-        + `<feGaussianBlur stdDeviation='9 4'/></filter></defs>`
-        + `<g filter='url(#cb)'>${body}</g></svg>`;
-      return [`${svgUrl(svg)} 0 0 / ${W}px ${H}px repeat fixed`];
+        // the glow is the clump grown a little and blurred more; the body sits on it,
+        // lifted, so the lit underside fades out instead of drawing a rim
+        + field('lit', 0, 3.2, 5.4, -3.05) + field('body', -7, 2.0, 5.0, -2.96)
+        + `<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fff' stop-opacity='.16'/>`
+        + `<stop offset='.3' stop-color='#fff' stop-opacity='.55'/><stop offset='.62' stop-color='#fff' stop-opacity='1'/>`
+        + `<stop offset='.86' stop-color='#fff' stop-opacity='.85'/><stop offset='1' stop-color='#fff' stop-opacity='.5'/></linearGradient>`
+        + `<mask id='m'><rect width='${W}' height='${H}' fill='url(#g)'/></mask></defs>`
+        + `<g mask='url(#m)' opacity='${A.toFixed(3)}'>`
+        + `<rect width='${W}' height='${H}' fill='${w.color}' filter='url(#lit)'/>`
+        + `<rect width='${W}' height='${H}' fill='${sh}' filter='url(#body)'/></g></svg>`;
+      return [`${svgUrl(svg)} 0 0 / 100vw 100vh no-repeat fixed`];
     }
     const scaleA = (c, k) => (k === 1 ? c : c.replace(/[\d.]+\)$/, (x) => `${(parseFloat(x) * k).toFixed(3)})`));
     /** Radius that reaches every corner of the window from any point in it:
