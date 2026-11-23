@@ -2312,7 +2312,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>`
         // the glow is the clump grown a little and blurred more; the body sits on it,
         // lifted, so the lit underside fades out instead of drawing a rim
-        + field('lit', 0, 2.6, 6.2, -3.42) + field('body', -8, 1.7, 5.8, -3.3)
+        + field('lit', 0, 2.6, 6.6, -4.02) + field('body', -8, 1.7, 6.2, -3.9)
         + `<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fff' stop-opacity='.16'/>`
         + `<stop offset='.3' stop-color='#fff' stop-opacity='.55'/><stop offset='.62' stop-color='#fff' stop-opacity='1'/>`
         + `<stop offset='.86' stop-color='#fff' stop-opacity='.85'/><stop offset='1' stop-color='#fff' stop-opacity='.5'/></linearGradient>`
