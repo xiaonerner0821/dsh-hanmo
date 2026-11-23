@@ -2850,8 +2850,10 @@ body[data-cm-goal-folded][data-cm-goal-fold-style="line"] .cm-goal-fold { opacit
 body[data-cm-goal-folded][data-cm-goal-fold-style="line"] .cm-goal-fold:focus-visible { opacity: 1; }
 /* --- pill: icon + label + unfold, left-aligned with the open bar's left edge */
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) {
-  background: none; box-shadow: none; padding: 0; cursor: pointer;
+  background: none; box-shadow: none; padding: 0; cursor: pointer; pointer-events: none;
 }
+/* only the pill itself takes the click; the empty rest of the row lets clicks through */
+body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > * { pointer-events: auto; }
 body[data-cm-goal-folded][data-cm-goal-fold-style="pill"] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])::before {
   right: auto; width: var(--cm-pill-w, 160px); box-shadow: var(--dsw-elevation-panel);
 }
