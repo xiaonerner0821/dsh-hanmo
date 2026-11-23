@@ -2009,22 +2009,25 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       // through rose in the middle, coral and peach low down, and a pale warm
       // glow still sitting on the horizon. The sun itself is out of sight, so
       // its light is a broad low wash rather than a disc. Light = the afterglow
-      // as the eye sees it; dark = the same sky a little later, indigo overhead
-      // with an ember band low down. Rose accent, periwinkle second accent.
+      // as the eye sees it. Dark is sampled from the reference photo band by
+      // band: magenta-violet overhead, the hottest magenta just above middle,
+      // a dip, then rose and coral low down (that dip and mid-height peak are
+      // what make it read as an afterglow rather than a plain gradient). Rose
+      // accent, periwinkle second accent.
       { id: 'dusk', label: '晚霞', hint: '渐变', schemes: ['light', 'dark'],
         fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
-        dark: { bg: '#1a0d24', side: '#170b20', l1: '#251431', l2: '#2f1a3d', l3: '#3a2148', ov: '#26152f', code: '#150a1e',
+        dark: { bg: '#220c2a', side: '#1e0a26', l1: '#2d1236', l2: '#381843', l3: '#441f50', ov: '#2e1338', code: '#1b0922',
           text: '#f2e8f2', dim: '#c8b6cf', faint: '#8d7d9b', accent: '#ef8fb6', accent2: '#9db4ff', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff7b8f',
           kw: '#ff9ec4', str: '#ffc9a3', fn: '#ef8fb6', num: '#b9a6ff', type: '#ffd9a8', com: '#7a6d8a', punc: '#cfc2d6',
-          sky: [['#3f1149', 0], ['#571459', 12], ['#74176a', 24], ['#931d7c', 36], ['#ae2886', 48], ['#c13588', 60], ['#cc487f', 74], ['#d4636f', 88], ['#d97a63', 100]],
+          sky: [['#9937a0', 0], ['#96399e', 12], ['#a23494', 25], ['#b6217f', 38], ['#c6105e', 50], ['#a23478', 62], ['#a0366d', 75], ['#a63057', 88], ['#a03650', 100]],
           sun: 'rgba(255, 150, 140, .42)', haze: ['rgba(170, 70, 200, .08)', 'rgba(255, 110, 120, .09)'],
-          waves: { kind: 'clouds', color: '#ff9ec2', shade: '#33103c', a: 0.6, seed: 11 }, readKeep: 0.5 },
+          waves: { kind: 'clouds', color: '#ff87b2', shade: '#2c1247', a: 0.92, seed: 11 }, readKeep: 0.12 },
         light: { bg: '#fdf5f4', side: '#f7ebf0', l1: '#ffffff', l2: '#fbf0f4', l3: '#f2e2e9', ov: '#ffffff', code: '#fbf4f5',
           text: '#33203a', dim: '#6b5273', faint: '#9b859f', accent: '#c04a86', accent2: '#5a5fc0', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
           kw: '#c2418d', str: '#b0621a', fn: '#c04a86', num: '#5a5fc0', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
           sky: [['#a9a6dd', 0], ['#bba2d6', 13], ['#cf9fc6', 27], ['#e2a0b4', 42], ['#f0a9a2', 57], ['#f8bb9d', 72], ['#fcd2ac', 87], ['#fde3c4', 100]],
           sun: 'rgba(255, 214, 168, .8)', haze: ['rgba(150, 130, 225, .07)', 'rgba(255, 150, 120, .09)'],
-          waves: { kind: 'clouds', color: '#ffe0d2', shade: '#9c8acd', a: 0.78 }, readKeep: 0.2 } },
+          waves: { kind: 'clouds', color: '#ffe2d4', shade: '#9585c8', a: 0.72 }, readKeep: 0.2 } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2309,7 +2312,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>`
         // the glow is the clump grown a little and blurred more; the body sits on it,
         // lifted, so the lit underside fades out instead of drawing a rim
-        + field('lit', 0, 3.2, 5.4, -3.05) + field('body', -7, 2.0, 5.0, -2.96)
+        + field('lit', 0, 2.6, 6.2, -3.42) + field('body', -8, 1.7, 5.8, -3.3)
         + `<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fff' stop-opacity='.16'/>`
         + `<stop offset='.3' stop-color='#fff' stop-opacity='.55'/><stop offset='.62' stop-color='#fff' stop-opacity='1'/>`
         + `<stop offset='.86' stop-color='#fff' stop-opacity='.85'/><stop offset='1' stop-color='#fff' stop-opacity='.5'/></linearGradient>`
