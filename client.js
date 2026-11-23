@@ -1835,6 +1835,15 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           for (const fn of listeners) fn();
         },
         reset() { this.set({ ...LOOK_DEFAULT }); },
+        /** Another tab changed the look: adopt what it stored (no write back, or
+         * the two tabs would keep echoing each other). */
+        reload() {
+          const next = read();
+          if (JSON.stringify(next) === JSON.stringify(state)) return;
+          state = next;
+          apply();
+          for (const fn of listeners) fn();
+        },
         apply,
         clear() {
           document.body.removeAttribute('data-cm-ink');
@@ -2791,6 +2800,9 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
 
     const WP_KEY = 'hanmo:wallpaper';
+    // bumped whenever the picture itself changes, so other tabs reload the blob
+    const WP_REV_KEY = 'hanmo:wallpaperRev';
+    const bumpRev = (key) => { try { localStorage.setItem(key, String(Date.now())); } catch { /* private mode */ } };
     const WP_DEFAULT = { on: true, scope: 'main', veil: 55 };
     /** The user's own wallpaper. The picture is scaled down (long edge
      * <= 2560px, JPEG) and kept as a Blob in IndexedDB, so a large photo
@@ -2862,11 +2874,29 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
           await run('readwrite', (s) => s.put(blob, 'wallpaper'));
           setUrl(blob);
           this.set({ on: true });
+          bumpRev(WP_REV_KEY);
         },
         async clearImage() {
           try { await run('readwrite', (s) => s.delete('wallpaper')); } catch { /* nothing stored */ }
           setUrl(null);
           apply(); notify();
+          bumpRev(WP_REV_KEY);
+        },
+        /** Another tab changed the wallpaper settings or image. */
+        async reload() {
+          let next;
+          try { next = { ...WP_DEFAULT, ...JSON.parse(localStorage.getItem(WP_KEY) || '{}') }; } catch { next = { ...WP_DEFAULT }; }
+          const changed = JSON.stringify(next) !== JSON.stringify(state);
+          state = next;
+          try {
+            const blob = await run('readonly', (s) => s.get('wallpaper'));
+            const had = !!url;
+            const got = blob instanceof Blob;
+            if (got) setUrl(blob);
+            else if (had) setUrl(null);
+            apply(); notify();
+          } catch { apply(); notify(); }
+          return changed;
         },
         async load() {
           try {
@@ -3171,6 +3201,16 @@ body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] [class*="_u
         },
         /** Re-evaluate the sky attributes (after the wallpaper changed). */
         repaint() { paint(); },
+        /** Another tab switched the theme / mode / sky: adopt its choice. */
+        reload() {
+          const next = read();
+          if (JSON.stringify(next) === JSON.stringify(state)) return false;
+          state = next;
+          paint();
+          if (!plain(state.id)) { syncing = true; try { push(); } finally { syncing = false; } }
+          notify();
+          return true;
+        },
         /** Where the current theme's sky gradient goes: { sb, main }. */
         sky: () => skyOf_(state.id),
         setSky(patch) {
@@ -5088,6 +5128,19 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           const offNative = native.subscribe(() => wallpaper.apply());
           return () => { offNative(); wallpaper.clear(); themes.repaint(); css.remove(); };
         });
+
+        // keep every tab on the same look: a change in one tab is stored, and the
+        // others adopt it on the storage event (same browser, same origin)
+        ctx.effect(() => {
+          const onStorage = (e) => {
+            if (e.storageArea !== localStorage || !e.key) return;
+            if (e.key === THEME_KEY) themes.reload();
+            else if (e.key === LOOK_KEY) look.reload();
+            else if (e.key === WP_KEY || e.key === WP_REV_KEY) wallpaper.reload();
+          };
+          window.addEventListener('storage', onStorage);
+          return () => window.removeEventListener('storage', onStorage);
+        }, 'hanmo: cross-tab settings');
 
         // first run only: adopt the chosen pair unless the user already picked fonts
         ctx.effect(() => {
