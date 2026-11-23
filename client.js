@@ -2806,6 +2806,72 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach', 'dusk']);
     const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
 
+    /** A fold button on DSH's goal bar (the 目标 strip over the composer). The bar
+     * is DSH's, so the button is added to its action row from outside: an
+     * observer puts it back whenever DSH re-renders the bar, and the folded
+     * state is a body attribute plus CSS, so DSH's own handlers stay intact.
+     * Folded, the bar shrinks to a pill (icon + label + unfold) and keeps the
+     * objective in its tooltip; a click anywhere on the pill unfolds it. */
+    const GOAL_FOLD_KEY = 'hanmo:goalFolded';
+    const GOAL_FOLD_CSS = `
+.cm-goal-fold { transition: transform .2s ease, background-color .15s, color .15s; }
+.cm-goal-fold svg { display: block; transition: transform .22s ease; }
+body[data-cm-goal-folded] .cm-goal-fold svg { transform: rotate(180deg); }
+body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) {
+  width: auto; max-width: max-content; margin-left: 0; gap: 6px; padding-left: 10px; cursor: pointer;
+}
+body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_objective"],
+body[data-cm-goal-folded] [data-goal-bar] > [class*="_bar"]:not([class*="_editBar"]) > [class*="_error"],
+body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] > :not(.cm-goal-fold) { display: none !important; }
+body[data-cm-goal-folded] [data-goal-bar] [class*="_actions"] { gap: 0; }
+`;
+    function goalFold() {
+      const zh = () => (document.documentElement.lang || navigator.language || '').toLowerCase().startsWith('zh');
+      const isFolded = () => { try { return localStorage.getItem(GOAL_FOLD_KEY) === '1'; } catch { return false; } };
+      const label = () => (isFolded() ? (zh() ? '展开目标' : 'Expand goal') : (zh() ? '折叠目标' : 'Collapse goal'));
+      const paint = () => {
+        document.body.toggleAttribute('data-cm-goal-folded', isFolded());
+        for (const b of document.querySelectorAll('.cm-goal-fold')) { b.setAttribute('aria-label', label()); b.title = label(); b.setAttribute('aria-expanded', String(!isFolded())); }
+      };
+      const set = (v) => { try { localStorage.setItem(GOAL_FOLD_KEY, v ? '1' : '0'); } catch { /* private mode */ } paint(); };
+      const svg = '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6.5 8 10.5 12 6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const mount = () => {
+        for (const bar of document.querySelectorAll('[data-goal-bar] > [class*="_bar"]:not([class*="_editBar"])')) {
+          const actions = bar.querySelector('[class*="_actions"]');
+          if (!actions || actions.querySelector('.cm-goal-fold')) continue;
+          const ref = actions.querySelector('button');
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = (ref ? ref.className + ' ' : '') + 'cm-goal-fold';
+          b.innerHTML = svg;
+          b.addEventListener('click', (e) => { e.stopPropagation(); set(!isFolded()); });
+          actions.append(b);
+          if (!bar.dataset.cmFoldWired) {
+            bar.dataset.cmFoldWired = '1';
+            // folded: the whole pill unfolds it
+            bar.addEventListener('click', () => { if (isFolded()) set(false); });
+          }
+        }
+        paint();
+      };
+      const css = document.createElement('style');
+      css.dataset.plugin = '@xiaonerner0821/dsh-hanmo:goal-fold';
+      css.textContent = GOAL_FOLD_CSS;
+      document.head.append(css);
+      let raf = 0;
+      const mo = new MutationObserver(() => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; mount(); }); });
+      mo.observe(document.body, { childList: true, subtree: true });
+      const onStorage = (e) => { if (e.key === GOAL_FOLD_KEY) paint(); };
+      window.addEventListener('storage', onStorage);
+      mount();
+      return () => {
+        mo.disconnect(); if (raf) cancelAnimationFrame(raf);
+        window.removeEventListener('storage', onStorage);
+        for (const b of document.querySelectorAll('.cm-goal-fold')) b.remove();
+        document.body.removeAttribute('data-cm-goal-folded');
+        css.remove();
+      };
+    }
     const WP_KEY = 'hanmo:wallpaper';
     // bumped whenever the picture itself changes, so other tabs reload the blob
     const WP_REV_KEY = 'hanmo:wallpaperRev';
@@ -5135,6 +5201,11 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           const offNative = native.subscribe(() => wallpaper.apply());
           return () => { offNative(); wallpaper.clear(); themes.repaint(); css.remove(); };
         });
+
+        // the goal bar above the composer: a fold button folds it to a small pill
+        // (goal icon + "目标"), the objective still in its tooltip; the choice is
+        // remembered across sessions and tabs
+        ctx.effect(() => goalFold(), 'hanmo: goal bar fold');
 
         // keep every tab on the same look: a change in one tab is stored, and the
         // others adopt it on the storage event (same browser, same origin)
