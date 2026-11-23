@@ -2818,7 +2818,7 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
      * objective in its tooltip; a click anywhere on the pill unfolds it. */
     const GOAL_FOLD_KEY = 'hanmo:goalFolded';
     // folded look: 'line' (a hairline in the bar's place) or 'pill'
-    const GOAL_FOLD_STYLE = 'line';
+    const GOAL_FOLD_STYLE = 'pill';
     const GOAL_FOLD_CSS = `
 .cm-goal-fold svg { display: block; transition: transform .22s ease; }
 body[data-cm-goal-folded] .cm-goal-fold svg { transform: rotate(180deg); }
