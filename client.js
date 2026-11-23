@@ -834,6 +834,13 @@ body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"],
 body[data-cm-weight] ${F} [class*="_centerCol"] [class*="_markdown"] td { font-weight: var(--cm-w-text, 400); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(strong, b) { font-weight: min(900, calc(var(--cm-w-text, 400) + 200)); }
 body[data-cm-weight] ${F} [class*="_centerCol"] :is(pre, code, kbd, samp) { font-weight: var(--cm-w-code, 400); }
+/* the session title above the transcript (the last crumb) is pinned at 500 by
+ * DSH, so the body-weight setting never reached it: it now follows the body
+ * weight one step up (400 -> 500, DSH's own default, so nothing changes until
+ * the setting moves) */
+body[data-cm-weight] ${F} [class*="_centerCol"] :is([class*="_crumb"], [class*="_crumbCurrent"]) {
+  font-weight: min(900, calc(var(--cm-w-text, 400) + 100));
+}
 /* run-detail rows: DSH pins the verb ("运行命令", "读取", "写入") at 400 (cordis
  * tools at 500) while the target beside it and some verbs without a weight of
  * their own ("上下文注入") inherit the chosen one, so one list mixed two
