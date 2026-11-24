@@ -2087,8 +2087,9 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.06, inkOnSky: true } },
       // 天色: the real sky over the user's city, from the sun's altitude now.
       // Both variants carry the same sky: twelve stops held in CSS variables
-      // (--cm-ds-0 .. 11) that the time-of-day clock rewrites every minute,
-      // with the sun's glow (colour and height) alongside. With 随时间 on (its
+      // (--cm-ds-0 .. 11) that the time-of-day clock rewrites every minute.
+      // No sun is drawn: only the tone of the gradient follows the real sky,
+      // the warm horizon of a sunrise or sunset is in the stops. With 随时间 on (its
       // default) the theme also picks its own scheme: light while the sun is
       // up, dark from sunset to sunrise, so the ink always suits the sky.
       { id: 'daysky', label: '天色', hint: '随时间', schemes: ['light', 'dark'], auto: true,
@@ -2096,13 +2097,13 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         light: { bg: '#f4f8fc', side: '#eaf1f8', l1: '#ffffff', l2: '#eef3f9', l3: '#e2eaf3', ov: '#ffffff', code: '#f3f7fb',
           text: '#1a2a3c', dim: '#4a5a6e', faint: '#8090a4', accent: '#2f6fc4', accent2: '#d9774c', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
           kw: '#2f62c0', str: '#b0621a', fn: '#7a4fc0', num: '#c0577a', type: '#8a5a00', com: '#8a96a8', punc: '#3a4658',
-          sky: DS_SKY, sun: 'var(--cm-ds-sun, rgba(255, 214, 170, .5))', sunY: 'var(--cm-ds-sun-y, 103%)',
+          sky: DS_SKY, sun: 'rgba(0, 0, 0, 0)',
           haze: ['rgba(120, 160, 230, .06)', 'rgba(255, 170, 120, .07)'],
           waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.34 },
         dark: { bg: '#10172e', side: '#0d1328', l1: '#18213d', l2: '#1f2a4a', l3: '#283457', ov: '#1a2342', code: '#0c1226',
           text: '#e8edf8', dim: '#b4bdd4', faint: '#7e88a6', accent: '#8fb6ff', accent2: '#ffb08a', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff7b8f',
           kw: '#a9b8ff', str: '#ffc2a6', fn: '#c6b4ff', num: '#9fd0ff', type: '#ffd9a0', com: '#6f7a98', punc: '#c9d0e6',
-          sky: DS_SKY, sun: 'var(--cm-ds-sun, rgba(255, 170, 130, .3))', sunY: 'var(--cm-ds-sun-y, 103%)',
+          sky: DS_SKY, sun: 'rgba(0, 0, 0, 0)',
           haze: ['rgba(90, 110, 220, .06)', 'rgba(255, 140, 110, .07)'],
           waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.28 } },
     ];
@@ -3041,7 +3042,7 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     let dsKeys = null;
     const labCache = new Map();
     const labOf = (sky) => { if (!labCache.has(sky)) labCache.set(sky, resampleSky(sky)); return labCache.get(sky); };
-    /** 天色 at altitude `alt`: twelve hex stops, the sun's colour and height. */
+    /** 天色 at altitude `alt`: twelve hex stops. */
     function daySky({ alt, rising }, side) {
       dsKeys = dsKeys || DS_KEYS();
       const keys = dsKeys[rising ? 'morning' : 'evening'][side];
@@ -3056,13 +3057,7 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         const A = labOf(s0), B = labOf(s1);
         lab = A.map((c, i) => c.map((x, j) => x + (B[i][j] - x) * f));
       }
-      // the sun: white-gold high up, deep amber on the horizon, gone below -8°
-      const up = Math.min(1, Math.max(0, alt / 25));
-      const below = Math.min(1, Math.max(0, -alt / 8));
-      const col = mixRgb([255, 168, 108], [255, 244, 220], ease(up));
-      const alpha = (side === 'light' ? 0.36 + 0.36 * (1 - up) : 0.42) * (1 - ease(below));
-      const y = alt >= 0 ? 103 - Math.min(1, alt / 40) * 92 : 103 + below * 18;
-      return { stops: lab.map(fromLab), sun: `rgba(${col.join(', ')}, ${alpha.toFixed(3)})`, sunY: `${y.toFixed(1)}%` };
+      return { stops: lab.map(fromLab) };
     }
     /** 随时间 tint for another theme in `scheme`: [top, bottom] rgba. */
     function todTint({ alt }, scheme) {
@@ -3080,6 +3075,52 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
       return [over([[[18, 28, 70], 0.2 * (1 - day)], [[255, 255, 255], 0.1 * day * (1 - gold)]]),
         over([[[18, 28, 70], 0.12 * (1 - day)], [[255, 150, 80], 0.16 * gold]])];
     }
+    /** Today's sunrise and sunset (local), found by scanning the altitude in
+     * five-minute steps; null on a polar day or night. */
+    function sunTimes(now = new Date()) {
+      const d0 = new Date(now); d0.setHours(0, 0, 0, 0);
+      let rise = null, set = null, prev = sunAltitude(d0, here);
+      for (let m = 5; m <= 1440; m += 5) {
+        const d = new Date(d0.getTime() + m * 60000), a = sunAltitude(d, here);
+        if (prev < 0 && a >= 0 && !rise) rise = d;
+        if (prev >= 0 && a < 0 && !set) set = d;
+        prev = a;
+      }
+      return { rise, set };
+    }
+    /** What the sky is doing now, in a word. */
+    function skyPhase({ alt, rising }) {
+      if (alt < -12) return '夜晚';
+      if (alt < -1) return rising ? '黎明' : '暮色';
+      if (alt < 6) return rising ? '日出' : '日落';
+      if (alt < 20) return rising ? '上午' : '下午';
+      return '白天';
+    }
+    /** The day of a theme as a horizontal strip: what its sky looks like each
+     * half hour, sampled a third of the way down. 天色 shows its own keyframes;
+     * another theme shows its sky under the 随时间 tint. */
+    function dayStrip(t, scheme) {
+      const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+      const v = skyOf(t[scheme] || HAN_SKY[scheme], scheme === 'dark');
+      const base = (v.sky.find(([c]) => c[0] === '#') || ['#8fb2e0'])[0];
+      const midHex = (() => { const hexes = v.sky.filter(([c]) => c[0] === '#'); return hexes.length ? hexes[Math.floor(hexes.length / 3)][0] : base; })();
+      const stops = [];
+      for (let k = 0; k <= 48; k++) {
+        const s = sunNow(new Date(d0.getTime() + k * 1800000));
+        let c;
+        if (t.auto) {
+          c = daySky(s, s.alt >= 0 ? 'light' : 'dark').stops[3];
+        } else {
+          const [top] = todTint(s, scheme);
+          const m = /rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/.exec(top);
+          c = m ? rgbHex(mixRgb(hexRgb(midHex), [+m[1], +m[2], +m[3]], Math.min(1, +m[4] * 2.6))) : midHex;
+        }
+        stops.push(`${c} ${(k / 48 * 100).toFixed(2)}%`);
+      }
+      const now = new Date();
+      return { grad: `linear-gradient(90deg, ${stops.join(', ')})`, at: ((now - d0) / 86400000) * 100 };
+    }
+    const hhmm = (d) => (d ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '—');
     /** 天色's scheme for the sun now: light while it is up. */
     const sunScheme = (s = sunNow()) => (s.alt >= 0 ? 'light' : 'dark');
     /** The clock: every minute (and on waking or switching back to the tab)
@@ -3087,7 +3128,7 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
      * tint; tell the theme store so 天色 can flip its scheme at the horizon. */
     function timeOfDay(themes) {
       const body = document.body;
-      const props = [...Array.from({ length: DS_N }, (_, i) => `--cm-ds-${i}`), '--cm-ds-sun', '--cm-ds-sun-y', '--cm-tod-a', '--cm-tod-b'];
+      const props = [...Array.from({ length: DS_N }, (_, i) => `--cm-ds-${i}`), '--cm-tod-a', '--cm-tod-b'];
       const run = () => {
         const s = sunNow();
         const t = themes.theme();
@@ -3099,8 +3140,6 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
         const still = side === 'light' ? { alt: 30, rising: false } : { alt: -10, rising: false };
         const d = daySky(t.id === 'daysky' && !timeOn ? still : s, side);
         d.stops.forEach((c, i) => body.style.setProperty(`--cm-ds-${i}`, c));
-        body.style.setProperty('--cm-ds-sun', d.sun);
-        body.style.setProperty('--cm-ds-sun-y', d.sunY);
         if (timeOn && t.id !== 'daysky') {
           const [a, b] = todTint(s, themes.scheme() || 'light');
           body.style.setProperty('--cm-tod-a', a);
@@ -3896,15 +3935,38 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 /* 渐变天空: two switch tiles, each a miniature window that shows the sky
  * where that switch puts it */
 .cm-ap-sky { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 360px; }
-.cm-ap-time { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: 360px; margin-top: 8px;
-  padding: 7px 10px; border-radius: 10px; border: 1px solid var(--ap-edge); background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
-.cm-ap-time:hover { border-color: var(--ap-hot); }
+/* 随时间变化: one card, the switch at its head, today's sky as a strip with a
+ * hairline at the current moment. Off, the strip drains to a still grey. */
+.cm-ap-time { display: grid; gap: 7px; width: 100%; max-width: 360px; margin-top: 8px; padding: 9px 11px 7px;
+  border-radius: 10px; border: 1px solid var(--ap-edge); background: transparent; color: inherit; font: inherit;
+  text-align: left; cursor: pointer; transition: border-color .18s, box-shadow .18s, transform .18s; }
+.cm-ap-time:hover { border-color: var(--ap-hot); transform: translateY(-1px); }
 .cm-ap-time:focus-visible { outline: none; box-shadow: var(--ap-glow); }
-.cm-ap-time > span { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
-.cm-ap-time > span > small { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
-.cm-ap-time > em { flex: none; font-style: normal; font-size: 11px; padding: 0 6px; border-radius: 99px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
-.cm-ap-time[aria-checked="true"] { border-color: var(--ap-hot); }
-.cm-ap-time[aria-checked="true"] > em { color: var(--ap-accent); background: var(--ap-soft); }
+.cm-ap-time[aria-checked="true"] { border-color: var(--ap-hot); box-shadow: var(--ap-glow); }
+.cm-ap-time-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cm-ap-time-title { font-size: 12.5px; font-weight: 600; color: var(--dsw-alias-label-primary); letter-spacing: .01em; }
+.cm-ap-switch { position: relative; flex: none; width: 30px; height: 17px; border-radius: 99px;
+  background: color-mix(in srgb, var(--dsw-alias-label-primary) 16%, transparent); transition: background-color .2s; }
+.cm-ap-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .28); transition: transform .22s cubic-bezier(.32, .72, 0, 1); }
+.cm-ap-time[aria-checked="true"] .cm-ap-switch { background: var(--ap-accent); }
+.cm-ap-time[aria-checked="true"] .cm-ap-switch::after { transform: translateX(13px); }
+.cm-ap-time-meta { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11px;
+  color: var(--dsw-alias-label-tertiary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cm-ap-time-meta > b { font-weight: 500; color: var(--dsw-alias-label-secondary); overflow: hidden; text-overflow: ellipsis; }
+.cm-ap-time[aria-checked="true"] .cm-ap-time-meta > b { color: var(--ap-accent); }
+.cm-ap-time-dot { display: inline-block; width: 3px; height: 3px; margin: 0 6px; border-radius: 50%; vertical-align: middle;
+  background: currentColor; opacity: .55; }
+.cm-ap-time-strip { position: relative; display: block; height: 9px; border-radius: 5px; background: var(--strip);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dsw-alias-label-primary) 10%, transparent);
+  transition: filter .25s, opacity .25s; }
+.cm-ap-time-strip > i { position: absolute; top: -3px; bottom: -3px; left: var(--at); width: 2px; margin-left: -1px; border-radius: 1px;
+  background: var(--dsw-alias-label-primary); box-shadow: 0 0 0 1.5px var(--ap-fill, #fff); }
+.cm-ap-time:not([aria-checked="true"]) .cm-ap-time-strip { filter: saturate(0) contrast(.8); opacity: .45; }
+.cm-ap-time:not([aria-checked="true"]) .cm-ap-time-strip > i { display: none; }
+.cm-ap-time-ticks { display: flex; justify-content: space-between; font-size: 9.5px; line-height: 1.4;
+  color: var(--dsw-alias-label-tertiary); opacity: .8; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .cm-ap-time, .cm-ap-switch, .cm-ap-switch::after, .cm-ap-time-strip { transition: none; } .cm-ap-time:hover { transform: none; } }
 .cm-ap-sky-tile { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 10px;
   border: 1px solid var(--ap-edge); background: none; cursor: pointer; font: inherit; color: var(--dsw-alias-label-secondary);
   text-align: left; transition: border-color .18s, box-shadow .18s, transform .18s cubic-bezier(.32, .72, 0, 1); }
@@ -4072,8 +4134,11 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       void ts;
       const timeOn = !!sky.time;
       const timeHint = t.auto
-        ? '按你所在时区的城市和真实时间计算太阳高度，天空从黎明、白天、黄昏到夜晚连续变化；日出后自动用浅色，日落后自动用深色'
-        : '保持你选的明暗，天空随真实时间变化：白天偏亮，夜晚偏暗，日出日落时地平线偏暖';
+        ? '按你所在时区的城市和真实时间计算太阳高度，天空的色调从黎明、白天、黄昏到夜晚连续变化；日出后自动用浅色，日落后自动用深色'
+        : '保持你选的明暗，天空的色调随真实时间变化：白天偏亮，夜晚偏暗，日出日落时地平线偏暖';
+      const sn = sunNow();
+      const { rise, set } = sunTimes();
+      const strip = dayStrip(t, s);
       return h(React.Fragment, null,
         h('div', { className: 'cm-ap-sky', role: 'group', 'aria-label': '渐变天空' },
           tile('sb', '侧边栏', '左侧侧边栏铺满从天顶到地平线的渐变'),
@@ -4082,8 +4147,16 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           type: 'button', role: 'switch', 'aria-checked': String(timeOn), className: 'cm-ap-time',
           title: timeHint, onClick: () => themes.setSky({ time: !timeOn }),
         },
-        h('span', null, '随时间变化', h('small', null, t.auto ? '天空与明暗跟着日出日落走' : '白天偏亮、夜晚偏暗')),
-        h('em', null, timeOn ? '开' : '关')));
+        h('span', { className: 'cm-ap-time-head' },
+          h('span', { className: 'cm-ap-time-title' }, '随时间变化'),
+          h('i', { className: 'cm-ap-switch', 'aria-hidden': 'true' })),
+        h('span', { className: 'cm-ap-time-meta' },
+          timeOn ? h('b', null, `现在 · ${skyPhase(sn)}`) : h('b', { title: t.auto ? '关闭后明暗按你的选择：浅色是白天的天，深色是暮色' : undefined }, '已固定'),
+          h('span', null, `日出 ${hhmm(rise)}`, h('span', { className: 'cm-ap-time-dot' }), `日落 ${hhmm(set)}`)),
+        h('span', { className: 'cm-ap-time-strip', 'aria-hidden': 'true', style: { '--strip': strip.grad, '--at': `${strip.at.toFixed(2)}%` } },
+          h('i', null)),
+        h('span', { className: 'cm-ap-time-ticks', 'aria-hidden': 'true' },
+          h('span', null, '0'), h('span', null, '6'), h('span', null, '12'), h('span', null, '18'), h('span', null, '24'))));
     }
     function AppearanceControls({ bridge, look, themes, wallpaper }) {
       const snap = React.useSyncExternalStore(bridge.subscribe, bridge.snapshot);
