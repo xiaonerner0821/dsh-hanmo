@@ -2066,12 +2066,12 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           sky: [['#9937a0', 0], ['#96399e', 12], ['#a23494', 25], ['#b6217f', 38], ['#c6105e', 50], ['#b7345f', 62], ['#be2d3b', 70], ['#c13425', 78], ['#b4441b', 86], ['#aa4e15', 93], ['#a15412', 100]],
           sun: 'rgba(255, 146, 84, .55)', haze: ['rgba(170, 70, 200, .08)', 'rgba(255, 116, 60, .11)'],
           waves: { kind: 'clouds', color: '#ff9a86', shade: '#2c1247', a: 0.92, seed: 11 }, readKeep: 0.12 },
-        light: { bg: '#fdf5f4', side: '#f7ebf0', l1: '#ffffff', l2: '#fbf0f4', l3: '#f2e2e9', ov: '#ffffff', code: '#fbf4f5',
-          text: '#33203a', dim: '#6b5273', faint: '#9b859f', accent: '#c04a86', accent2: '#5a5fc0', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
-          kw: '#c2418d', str: '#b0621a', fn: '#c04a86', num: '#5a5fc0', type: '#9d6400', com: '#9a8aa0', punc: '#4a3f52',
-          sky: [['#a9a6dd', 0], ['#bba2d6', 13], ['#cf9fc6', 27], ['#e2a0b4', 42], ['#f0a9a2', 57], ['#f8bb9d', 72], ['#fcd2ac', 87], ['#fde3c4', 100]],
-          sun: 'rgba(255, 214, 168, .8)', haze: ['rgba(150, 130, 225, .07)', 'rgba(255, 150, 120, .09)'],
-          waves: { kind: 'clouds', color: '#ffe2d4', shade: '#9585c8', a: 0.72 }, readKeep: 0.2 } },
+        light: { bg: '#f3f3fb', side: '#eceefa', l1: '#ffffff', l2: '#f1f2fb', l3: '#e3e5f6', ov: '#ffffff', code: '#f4f4fb',
+          text: '#1f244f', dim: '#4b507c', faint: '#7f84a8', accent: '#4a56c4', accent2: '#d0606e', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
+          kw: '#4a56c4', str: '#b4505e', fn: '#6a4fbf', num: '#c0577a', type: '#8a5a00', com: '#8b8fae', punc: '#3b3f63',
+          sky: [['#6b7dd9', 0], ['#7583d4', 12], ['#7e8bd4', 24], ['#8691d5', 36], ['#8f9bda', 48], ['#92a1e8', 58], ['#a3a4e2', 66], ['#b8aade', 74], ['#d1b2d8', 82], ['#e4b2c6', 89], ['#f6adac', 95], ['#ffada6', 100]],
+          sun: 'rgba(255, 176, 160, .55)', haze: ['rgba(110, 125, 220, .07)', 'rgba(255, 150, 140, .09)'],
+          waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 0.5, seed: 8 }, readKeep: 0.12 } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2227,7 +2227,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function waveLayers(v, k) {
       const w = v.waves;
       if (!w) return [];
-      const key = `${w.kind}|${w.color}|${w.a}|${w.at}|${w.shade}|${k}`;
+      const key = `${w.kind}|${w.wisp ? 'wisp' : ''}|${w.seed}|${w.color}|${w.a}|${w.at}|${w.shade}|${k}`;
       if (!waveCache.has(key)) waveCache.set(key, w.kind === 'bubbles' ? bubbleLayers(w, k)
         : w.kind === 'clouds' ? cloudLayers(w, k) : foamLayers(w, k));
       return waveCache.get(key);
@@ -2333,6 +2333,27 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         + `<path d='${edge}' fill='none' stroke='${c}' stroke-opacity='${op(w.a)}' stroke-width='1.5' filter='url(#v2)'/></svg>`;
       return [`${svgUrl(svg)} 0 ${w.at}% / ${W}px ${H}px repeat-x fixed`];
     }
+    /** 晚霞 light: thin cirrus wisps high in a clear evening sky (the user's
+     * reference): long, very soft white streaks, stretched far sideways, a
+     * little denser in places and torn in others, fading out by mid-height.
+     * Fractal noise at a very low horizontal frequency, a gentle ramp (no hard
+     * edge), a wide horizontal blur, masked to the upper sky. */
+    function wispLayers(w, k) {
+      const W = 1600, H = 900;
+      const A = Math.min(1, w.a * k);
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${W}' height='${H}'><defs>`
+        + `<filter id='w' filterUnits='userSpaceOnUse' x='0' y='0' width='${W}' height='${H}'>`
+        + `<feTurbulence type='fractalNoise' baseFrequency='0.0016 0.016' numOctaves='5' seed='${w.seed || 8}' result='n'/>`
+        + `<feColorMatrix in='n' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 3.4 0 0 0 -1.72' result='a'/>`
+        + `<feGaussianBlur in='a' stdDeviation='14 3' result='b'/>`
+        + `<feComposite in='SourceGraphic' in2='b' operator='in'/></filter>`
+        + `<linearGradient id='g' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='#fff' stop-opacity='.55'/>`
+        + `<stop offset='.14' stop-color='#fff' stop-opacity='1'/><stop offset='.36' stop-color='#fff' stop-opacity='.8'/>`
+        + `<stop offset='.56' stop-color='#fff' stop-opacity='.28'/><stop offset='.7' stop-color='#fff' stop-opacity='0'/></linearGradient>`
+        + `<mask id='m'><rect width='${W}' height='${H}' fill='url(#g)'/></mask></defs>`
+        + `<g mask='url(#m)' opacity='${A.toFixed(3)}'><rect width='${W}' height='${H}' fill='${w.color}' filter='url(#w)'/></g></svg>`;
+      return [`${svgUrl(svg)} 0 0 / 100vw 100vh no-repeat fixed`];
+    }
     /** 晚霞: the clouds of an afterglow, after the reference photos: a broken
      * field of soft clumps (altocumulus, a "mackerel sky"), sparse overhead and
      * thickening toward the horizon. Built from fractal noise, stretched
@@ -2343,6 +2364,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * thin glowing underside shows. One image across the whole window (no
      * repeat), so there is no tile seam and the clumps keep their size. */
     function cloudLayers(w, k) {
+      if (w.wisp) return wispLayers(w, k);
       const W = 1200, H = 800, sh = w.shade || w.color;
       const A = Math.min(1, w.a * k);
       // a soft ramp (density grows with the noise, no hard outline), blurred with
