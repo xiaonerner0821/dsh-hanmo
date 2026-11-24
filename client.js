@@ -940,6 +940,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
 [data-queue-dock] [class*="_list"] { max-height: min(45vh, 480px); }
 [data-queue-dock] [class*="_row"] { align-items: flex-start; }
 [data-queue-dock] [class*="_row"] > [class*="_attachments"] { margin-top: 2px; }
+[data-queue-dock] [class*="_row"] > [class*="_lead"] { height: 28px; align-self: flex-start; }
 [data-queue-dock] [class*="_row"] > :is([class*="_preview"], [class*="_status"]) { margin-top: 4px; }
 [data-queue-dock] :is([class*="_preview"], [class*="_count"]) { font-family: var(--dsw-font-family); }
 [data-queue-dock] [class*="_preview"] [class*="_ellipsis"] {
@@ -1158,7 +1159,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.5.4'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.5.5'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
