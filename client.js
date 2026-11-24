@@ -1168,7 +1168,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         const restore = box.style.position;
         if (getComputedStyle(box).position === 'static') box.style.position = 'relative';
         box.prepend(hl);
-        t = { hl, box, row: null, s: null, v: { x: 0, y: 0, w: 0, h: 0 }, at: 0, raf: 0, restore };
+        t = { hl, box, row: null, s: null, v: { x: 0, y: 0, w: 0, h: 0 }, at: 0, raf: 0, park: 0, restore };
         tracks.set(box, t);
         return t;
       }
@@ -1199,6 +1199,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         t.raf = requestAnimationFrame((n) => step(t, n));
       }
       function go(t, row) {
+        clearTimeout(t.park);
         const fresh = !t.row || !t.s || !t.hl.classList.contains('on');
         t.row = row;
         if (!t.box.classList.contains('mg-hl-on')) t.box.classList.add('mg-hl-on');
@@ -1216,6 +1217,19 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         t.row = null;
         if (t.hl.classList.contains('on')) t.hl.classList.remove('on');
         if (t.box.classList.contains('mg-hl-on')) t.box.classList.remove('mg-hl-on');
+        // A hidden shape still counts toward its list's scroll height: left at
+        // the old row (a session in a list that has since shrunk: "show N more"
+        // folded, a workspace collapsed, another workspace selected) it held
+        // the sidebar open with blank space below the last row. Once it has
+        // faded out, park it at the top with no size.
+        clearTimeout(t.park);
+        t.park = setTimeout(() => {
+          if (t.row || t.hl.classList.contains('on')) return;
+          t.s = null;
+          t.hl.style.transform = 'none';
+          t.hl.style.width = '0px';
+          t.hl.style.height = '0px';
+        }, 240);
       }
 
       let queued = 0, syncAll = null;
@@ -1230,7 +1244,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           go(trackFor(box, row.matches(PANEL_ROW) ? 'panel' : 'session'), row);
         }
         for (const [box, t] of tracks) {
-          if (!box.isConnected) { cancelAnimationFrame(t.raf); tracks.delete(box); continue; }
+          if (!box.isConnected) { cancelAnimationFrame(t.raf); clearTimeout(t.park); tracks.delete(box); continue; }
           if (!seen.has(box)) hide(t);
           else if (t.row && !t.raf) { t.s = boxOf(t.row, box); draw(t); }
         }
@@ -1329,6 +1343,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         cancelAnimationFrame(queued);
         for (const [box, t] of tracks) {
           cancelAnimationFrame(t.raf);
+          clearTimeout(t.park);
           t.hl.remove();
           box.classList.remove('mg-hl-on');
           box.style.position = t.restore;
