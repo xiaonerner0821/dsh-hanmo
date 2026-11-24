@@ -1932,6 +1932,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
         },
       };
     })();
+    /** 天色's sky: twelve evenly spaced stops, each a CSS variable the
+     * time-of-day clock writes (see timeOfDay). */
+    const DS_N = 12;
+    const DS_SKY = Array.from({ length: DS_N }, (_, i) => [`var(--cm-ds-${i}, #8fb2e0)`, +(i / (DS_N - 1) * 100).toFixed(2)]);
     const THEMES = [
       { id: HAN_ID, label: 'Han', hint: '默认', schemes: ['light', 'dark'],
         swatch: { light: ['#ffffff', '#0b8aa8', '#6e5ce6', '#1d2b3a'], dark: ['#1a212b', '#84dcee', '#9284f0', '#dbe4ec'] } },
@@ -2081,6 +2085,26 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
           sky: [['#303d82', 0], ['#313d84', 5], ['#323f87', 10], ['#34418d', 15], ['#364493', 20], ['#39489a', 25], ['#3c4ba2', 30], ['#3f4fa9', 35], ['#4152b0', 40], ['#4354b5', 45], ['#4555b8', 50], ['#4a50b5', 55], ['#5f54ae', 60], ['#7b60a7', 65], ['#926ba5', 70], ['#aa72ab', 75], ['#b773a2', 80], ['#c67494', 85], ['#d47482', 90], ['#d97b79', 95], ['#da847c', 100]],
           sun: 'rgba(255, 170, 150, .5)', haze: ['rgba(90, 110, 220, .06)', 'rgba(255, 150, 140, .08)'],
           waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.06, inkOnSky: true } },
+      // 天色: the real sky over the user's city, from the sun's altitude now.
+      // Both variants carry the same sky: twelve stops held in CSS variables
+      // (--cm-ds-0 .. 11) that the time-of-day clock rewrites every minute,
+      // with the sun's glow (colour and height) alongside. With 随时间 on (its
+      // default) the theme also picks its own scheme: light while the sun is
+      // up, dark from sunset to sunrise, so the ink always suits the sky.
+      { id: 'daysky', label: '天色', hint: '随时间', schemes: ['light', 'dark'], auto: true,
+        fonts: { text: 'Inter, HarmonyOS Sans SC', mono: 'Geist Mono, JetBrains Mono, HarmonyOS Sans SC' },
+        light: { bg: '#f4f8fc', side: '#eaf1f8', l1: '#ffffff', l2: '#eef3f9', l3: '#e2eaf3', ov: '#ffffff', code: '#f3f7fb',
+          text: '#1a2a3c', dim: '#4a5a6e', faint: '#8090a4', accent: '#2f6fc4', accent2: '#d9774c', ok: '#2f8a55', warn: '#a86f00', err: '#c8364a',
+          kw: '#2f62c0', str: '#b0621a', fn: '#7a4fc0', num: '#c0577a', type: '#8a5a00', com: '#8a96a8', punc: '#3a4658',
+          sky: DS_SKY, sun: 'var(--cm-ds-sun, rgba(255, 214, 170, .5))', sunY: 'var(--cm-ds-sun-y, 103%)',
+          haze: ['rgba(120, 160, 230, .06)', 'rgba(255, 170, 120, .07)'],
+          waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.34 },
+        dark: { bg: '#10172e', side: '#0d1328', l1: '#18213d', l2: '#1f2a4a', l3: '#283457', ov: '#1a2342', code: '#0c1226',
+          text: '#e8edf8', dim: '#b4bdd4', faint: '#7e88a6', accent: '#8fb6ff', accent2: '#ffb08a', ok: '#8fd6a3', warn: '#ffc46b', err: '#ff7b8f',
+          kw: '#a9b8ff', str: '#ffc2a6', fn: '#c6b4ff', num: '#9fd0ff', type: '#ffd9a0', com: '#6f7a98', punc: '#c9d0e6',
+          sky: DS_SKY, sun: 'var(--cm-ds-sun, rgba(255, 170, 130, .3))', sunY: 'var(--cm-ds-sun-y, 103%)',
+          haze: ['rgba(90, 110, 220, .06)', 'rgba(255, 140, 110, .07)'],
+          waves: { kind: 'clouds', wisp: true, color: '#ffffff', a: 1 }, readKeep: 0.28 } },
     ];
     // the sun sits where its theme says (top for 朝阳), stamped on each variant
     for (const t of THEMES) for (const s of t.schemes) if (t[s] && t.sunTop) t[s].sunTop = true;
@@ -2120,12 +2144,17 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
      * glow on the lower edge. */
     function skyGradient(v, alpha, sunAt, size, reach, preview, keep) {
       const list = v.sky.map(([c, p]) => [
-        `color-mix(in srgb, ${keep ? mixHex(c, v.bg, keep) : c} ${alpha}, transparent)`, p]);
-      const at = sunAt || (v.sunTop ? '50% -2%' : '50% 102%');
+        `color-mix(in srgb, ${keep ? mixC(c, v.bg, keep) : c} ${alpha}, transparent)`, p]);
+      const at = sunAt || `50% ${v.sunY || (v.sunTop ? '-2%' : '102%')}`;
       if (preview) return [sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }), baseLayer(list)].join(', ');
-      return [...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
+      return [TOD_LAYER, ...waveLayers(v, 1), sunGlow(v, at, sunSize(v, size || [120, 22]), { reach }),
         ...seaDepth(v, list, at, 1, false), baseLayer(list)].join(', ');
     }
+    /** 随时间 for the other sky themes: one tint over the whole window, its
+     * top and bottom colours written by the time-of-day clock (a cool dim at
+     * night, a lift by day, a warm band low down around sunrise and sunset).
+     * Transparent until set, so a theme with the switch off is untouched. */
+    const TOD_LAYER = 'linear-gradient(180deg, var(--cm-tod-a, transparent), var(--cm-tod-b, transparent)) 0 0 / 100vw 100vh no-repeat fixed';
     const baseLayer = (list) => `linear-gradient(180deg, ${list.map(([c, p]) => `${c} ${p}%`).join(', ')})`;
     const svgUrl = (s) => `url("data:image/svg+xml,${encodeURIComponent(s)}")`;
     /** Sunlight shafts of a sea theme (v.rays): a fan of soft rays from the
@@ -2413,6 +2442,10 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     };
     const rgbHex = (c) => `#${c.map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, '0')).join('')}`;
     const mixHex = (a, b, t) => rgbHex(mixRgb(hexRgb(a), hexRgb(b), t));
+    /** mixHex for a colour that may be a CSS variable (天色's stops): hex is
+     * mixed here, anything else by the browser. */
+    const mixC = (a, b, t) => (typeof a === 'string' && a[0] === '#' ? mixHex(a, b, t)
+      : `color-mix(in oklab, ${a} ${Math.round((1 - t) * 100)}%, ${b})`);
     const rgba = (hex, a) => `rgba(${hexRgb(hex).join(', ')}, ${a})`;
     /* Han has no palette object (DSH's own light / dark plus the main
      * stylesheet), so the sky borrows these stand-ins for its tones */
@@ -2462,9 +2495,9 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function mainSkyGradient(v, dark) {
       const keep = READ_KEEP(dark);
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
-      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
-      const at = `50% ${v.sunTop ? '-4%' : '104%'}`;
-      return [...waveLayers(v, 0.5), sunGlow(v, at, sunSize(v, [70, 18]), { k: 0.6, fade: 72 }),
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixC(c, v.bg, keep)} ${a}, transparent)`, p]);
+      const at = `50% ${v.sunY || (v.sunTop ? '-4%' : '104%')}`;
+      return [TOD_LAYER, ...waveLayers(v, 0.5), sunGlow(v, at, sunSize(v, [70, 18]), { k: 0.6, fade: 72 }),
         ...seaDepth(v, list, at, 0.3), ...topBandLayer(v), baseLayer(list)].join(', ');
     }
     /** The panel read strength: how far each sky colour is folded toward the
@@ -2478,8 +2511,9 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function joinedSky(v, dark, sunAt, size) {
       const a = 'calc(var(--cm-main-alpha, 1) * 100%)';
       const keep = v.readKeep != null ? v.readKeep : READ_KEEP(dark);
-      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixHex(c, v.bg, keep)} ${a}, transparent)`, p]);
+      const list = v.sky.map(([c, p]) => [`color-mix(in srgb, ${mixC(c, v.bg, keep)} ${a}, transparent)`, p]);
       return [
+        TOD_LAYER,
         ...waveLayers(v, 1),
         sunGlow(v, sunAt, sunSize(v, size), { reach: JOIN_REACH, k: dark ? 0.72 : 1 }),
         ...seaDepth(v, list, sunAt, dark ? 0.72 : 0.9, true),
@@ -2858,11 +2892,11 @@ ${MN} ${F} [class*="_centerCol"] [class*="_header"]:has(> [class*="_tabs"]) { te
  * strength; the sidebar's sun moves onto the seam to meet the main panel's
  * half, and the hairline between the columns goes. */
 ${SB}[data-cm-sky-main] ${F} [class*="_centerCol"] {
-  background: ${joinedSky(v, dark, `0% ${v.sunTop ? '-3%' : '103%'}`, [46, 20])} !important;
+  background: ${joinedSky(v, dark, `0% ${v.sunY || (v.sunTop ? '-3%' : '103%')}`, [46, 20])} !important;
 }
 ${SB}[data-cm-sky-main] ${F} [class*="_sidebarCol"] {
   border-right-color: transparent !important;
-  background: ${joinedSky(v, dark, `100% ${v.sunTop ? '-3%' : '103%'}`, [46, 20])} !important;
+  background: ${joinedSky(v, dark, `100% ${v.sunY || (v.sunTop ? '-3%' : '103%')}`, [46, 20])} !important;
 }
 ${MN} ${F} [class*="_centerCol"] :is(${solidPopups}, .mf-root) {
   --dsw-alias-bg-base: ${v.bg};
@@ -2904,8 +2938,191 @@ ${MN} ${F} [class*="_centerCol"] [class*="_userStack"] [class*="_bubble"] { back
     }
     /** Where the sky goes by default: 落日 and 朝阳 are one sky over the whole
      * window (sidebar and main panel joined), every other theme starts plain. */
-    const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach', 'dusk']);
-    const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id) });
+    const SKY_THEMES = new Set(['sunset', 'sunrise', 'ocean', 'beach', 'dusk', 'daysky']);
+    const skyDefault = (id) => ({ sb: SKY_THEMES.has(id), main: SKY_THEMES.has(id), time: id === 'daysky' });
+
+    /* ---------------- time of day ----------------
+     * Where: the city of the browser's time zone (no location permission).
+     * When: the sun's altitude now, from the NOAA solar position formulas
+     * (good to about half a degree), so seasons, DST and latitude all follow.
+     * What: 天色 interpolates keyframe skies by altitude in OKLab; the other
+     * themes, with 随时间 on, keep their sky and get a tint over it. */
+    const TZ_CITY = {
+      'Asia/Shanghai': [39.9, 116.4], 'Asia/Chongqing': [29.6, 106.5], 'Asia/Harbin': [45.8, 126.6], 'Asia/Urumqi': [43.8, 87.6],
+      'Asia/Hong_Kong': [22.3, 114.2], 'Asia/Macau': [22.2, 113.5], 'Asia/Taipei': [25.0, 121.5], 'Asia/Tokyo': [35.7, 139.7],
+      'Asia/Seoul': [37.6, 127.0], 'Asia/Singapore': [1.35, 103.8], 'Asia/Kuala_Lumpur': [3.1, 101.7], 'Asia/Bangkok': [13.8, 100.5],
+      'Asia/Ho_Chi_Minh': [10.8, 106.7], 'Asia/Manila': [14.6, 121.0], 'Asia/Jakarta': [-6.2, 106.8], 'Asia/Kolkata': [28.6, 77.2],
+      'Asia/Calcutta': [28.6, 77.2], 'Asia/Dubai': [25.2, 55.3], 'Asia/Jerusalem': [31.8, 35.2], 'Asia/Tehran': [35.7, 51.4],
+      'Asia/Karachi': [24.9, 67.0], 'Asia/Dhaka': [23.8, 90.4], 'Asia/Almaty': [43.2, 76.9], 'Asia/Ulaanbaatar': [47.9, 106.9],
+      'Europe/London': [51.5, -0.13], 'Europe/Dublin': [53.3, -6.3], 'Europe/Lisbon': [38.7, -9.1], 'Europe/Paris': [48.9, 2.35],
+      'Europe/Berlin': [52.5, 13.4], 'Europe/Madrid': [40.4, -3.7], 'Europe/Rome': [41.9, 12.5], 'Europe/Amsterdam': [52.4, 4.9],
+      'Europe/Zurich': [47.4, 8.5], 'Europe/Stockholm': [59.3, 18.1], 'Europe/Oslo': [59.9, 10.8], 'Europe/Helsinki': [60.2, 24.9],
+      'Europe/Warsaw': [52.2, 21.0], 'Europe/Athens': [38.0, 23.7], 'Europe/Istanbul': [41.0, 29.0], 'Europe/Moscow': [55.8, 37.6],
+      'Europe/Kiev': [50.45, 30.5], 'Europe/Kyiv': [50.45, 30.5], 'Africa/Cairo': [30.0, 31.2], 'Africa/Johannesburg': [-26.2, 28.0],
+      'Africa/Lagos': [6.5, 3.4], 'Africa/Nairobi': [-1.3, 36.8], 'America/New_York': [40.7, -74.0], 'America/Toronto': [43.7, -79.4],
+      'America/Chicago': [41.9, -87.6], 'America/Denver': [39.7, -105.0], 'America/Phoenix': [33.4, -112.1], 'America/Los_Angeles': [34.05, -118.2],
+      'America/Vancouver': [49.3, -123.1], 'America/Anchorage': [61.2, -149.9], 'America/Mexico_City': [19.4, -99.1], 'America/Bogota': [4.7, -74.1],
+      'America/Lima': [-12.0, -77.0], 'America/Santiago': [-33.4, -70.7], 'America/Sao_Paulo': [-23.5, -46.6], 'America/Buenos_Aires': [-34.6, -58.4],
+      'America/Argentina/Buenos_Aires': [-34.6, -58.4], 'Pacific/Honolulu': [21.3, -157.9], 'Pacific/Auckland': [-36.85, 174.8],
+      'Australia/Sydney': [-33.9, 151.2], 'Australia/Melbourne': [-37.8, 145.0], 'Australia/Brisbane': [-27.5, 153.0], 'Australia/Perth': [-31.95, 115.9],
+    };
+    /** [lat, lon] for the browser's time zone; an unlisted zone takes the
+     * longitude of its UTC offset at a mid latitude. */
+    const here = (() => {
+      let tz = '';
+      try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch { /* old engine */ }
+      if (TZ_CITY[tz]) return TZ_CITY[tz];
+      const lon = -new Date().getTimezoneOffset() / 4; // minutes -> degrees
+      return [tz.startsWith('Australia/') || tz.startsWith('America/Argentina') ? -33 : 35, Math.max(-180, Math.min(180, lon))];
+    })();
+    /** The sun's altitude in degrees at `date` for [lat, lon]. */
+    function sunAltitude(date, [lat, lon]) {
+      const rad = Math.PI / 180;
+      const n = date.getTime() / 86400000 + 2440587.5 - 2451545.0;
+      const L = (280.46 + 0.9856474 * n) % 360, g = ((357.528 + 0.9856003 * n) % 360) * rad;
+      const lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * rad, eps = (23.439 - 0.0000004 * n) * rad;
+      const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+      const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
+      const H = ((280.46061837 + 360.98564736629 * n) % 360 + lon) * rad - ra;
+      return Math.asin(Math.sin(lat * rad) * Math.sin(dec) + Math.cos(lat * rad) * Math.cos(dec) * Math.cos(H)) / rad;
+    }
+    /** { alt, rising } for now. */
+    const sunNow = (date = new Date()) => {
+      const alt = sunAltitude(date, here);
+      return { alt, rising: sunAltitude(new Date(date.getTime() + 600000), here) > alt };
+    };
+    // OKLab, so the midpoints between two skies stay clean instead of greying
+    const _lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    const _gam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+    function toLab(hx) {
+      const [r, g, b] = hexRgb(hx).map((x) => _lin(x / 255));
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+      const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+      const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+      return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
+    }
+    function fromLab([L, A, B]) {
+      const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3, m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3, s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+      return rgbHex([4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+        -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map((c) => _gam(Math.min(1, Math.max(0, c))) * 255));
+    }
+    /** A sky (any stops) resampled to DS_N evenly spaced stops, in OKLab. */
+    function resampleSky(stops) {
+      return Array.from({ length: DS_N }, (_, i) => {
+        const pos = (i / (DS_N - 1)) * 100;
+        const k = stops.findIndex(([, q]) => q >= pos);
+        if (k <= 0) return toLab(stops[k === 0 ? 0 : stops.length - 1][0]);
+        const [c0, p0] = stops[k - 1], [c1, p1] = stops[k], f = (pos - p0) / ((p1 - p0) || 1);
+        const a = toLab(c0), b = toLab(c1);
+        return a.map((x, j) => x + (b[j] - x) * f);
+      });
+    }
+    const ease = (x) => x * x * (3 - 2 * x);
+    // 天色's own skies, for the hours no other theme covers
+    const DS_NOON = [['#7aaee8', 0], ['#8fbcec', 20], ['#a7cbef', 42], ['#c1daf2', 64], ['#d8e7f4', 84], ['#e8f0f5', 100]];
+    const DS_MORNING = [['#88b4e6', 0], ['#a4c6ea', 28], ['#c4d8ec', 52], ['#e2e4e8', 76], ['#f7e6d6', 100]];
+    const DS_AFTERNOON = [['#80afe4', 0], ['#9ec1e9', 28], ['#c0d5eb', 52], ['#e4ded8', 78], ['#f6d9bc', 100]];
+    const DS_NIGHT = [['#060a1c', 0], ['#0a1029', 40], ['#111a3c', 80], ['#1a2350', 100]];
+    const DS_DAWN = [['#0b1230', 0], ['#16204a', 40], ['#2a3264', 75], ['#4a4a78', 100]];
+    const DS_DEEPDUSK = [['#120c2e', 0], ['#1e1442', 35], ['#36204f', 70], ['#5a2c4c', 100]];
+    const themeSky = (id, s) => (THEMES.find((x) => x.id === id) || {})[s]?.sky;
+    // 朝阳 paints its sun at the top of the window; 天色's sun rises from the
+    // horizon at the bottom, so its dawn skies are 朝阳's turned upside down
+    const flipSky = (sky) => sky.map(([c, q]) => [c, 100 - q]).reverse();
+    /** Keyframes by altitude, morning and evening apart (dawn runs cool, dusk
+     * warm). The light side (sun up) and the dark side (sun down) never blend
+     * into each other: at the horizon the scheme flips with them. */
+    const DS_KEYS = () => ({
+      morning: { light: [[0, flipSky(themeSky('sunrise', 'light'))], [6, DS_MORNING], [22, DS_NOON]],
+        dark: [[-18, DS_NIGHT], [-10, DS_DAWN], [-4, flipSky(themeSky('sunrise', 'dark'))], [0, flipSky(themeSky('sunrise', 'dark'))]] },
+      evening: { light: [[0, themeSky('sunset', 'light')], [6, DS_AFTERNOON], [22, DS_NOON]],
+        dark: [[-18, DS_NIGHT], [-11, DS_DEEPDUSK], [-6, themeSky('dusk', 'dark')], [-1.5, themeSky('dusk', 'light')], [0, themeSky('dusk', 'light')]] },
+    });
+    let dsKeys = null;
+    const labCache = new Map();
+    const labOf = (sky) => { if (!labCache.has(sky)) labCache.set(sky, resampleSky(sky)); return labCache.get(sky); };
+    /** 天色 at altitude `alt`: twelve hex stops, the sun's colour and height. */
+    function daySky({ alt, rising }, side) {
+      dsKeys = dsKeys || DS_KEYS();
+      const keys = dsKeys[rising ? 'morning' : 'evening'][side];
+      const a = side === 'light' ? Math.max(0, alt) : Math.min(0, alt);
+      let k = keys.findIndex(([q]) => q >= a);
+      if (k === -1) k = keys.length - 1;
+      let lab;
+      if (k === 0) lab = labOf(keys[0][1]);
+      else {
+        const [a0, s0] = keys[k - 1], [a1, s1] = keys[k];
+        const f = ease(Math.min(1, Math.max(0, (a - a0) / ((a1 - a0) || 1))));
+        const A = labOf(s0), B = labOf(s1);
+        lab = A.map((c, i) => c.map((x, j) => x + (B[i][j] - x) * f));
+      }
+      // the sun: white-gold high up, deep amber on the horizon, gone below -8°
+      const up = Math.min(1, Math.max(0, alt / 25));
+      const below = Math.min(1, Math.max(0, -alt / 8));
+      const col = mixRgb([255, 168, 108], [255, 244, 220], ease(up));
+      const alpha = (side === 'light' ? 0.36 + 0.36 * (1 - up) : 0.42) * (1 - ease(below));
+      const y = alt >= 0 ? 103 - Math.min(1, alt / 40) * 92 : 103 + below * 18;
+      return { stops: lab.map(fromLab), sun: `rgba(${col.join(', ')}, ${alpha.toFixed(3)})`, sunY: `${y.toFixed(1)}%` };
+    }
+    /** 随时间 tint for another theme in `scheme`: [top, bottom] rgba. */
+    function todTint({ alt }, scheme) {
+      const day = ease(Math.min(1, Math.max(0, (alt + 6) / 18)));          // 0 night .. 1 day (-6° .. 12°)
+      const gold = alt > -6 ? Math.exp(-(((alt - 2) / 6) ** 2)) : 0;     // sunrise / sunset band
+      const over = (layers) => { // premultiplied "over" of [rgb, a] layers
+        let r = 0, g = 0, b = 0, a = 0;
+        for (const [c, x] of layers) { r = c[0] * x + r * (1 - x); g = c[1] * x + g * (1 - x); b = c[2] * x + b * (1 - x); a = x + a * (1 - x); }
+        return a < 0.002 ? 'transparent' : `rgba(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)}, ${a.toFixed(3)})`;
+      };
+      if (scheme === 'dark') {
+        return [over([[[0, 2, 14], 0.22 * (1 - day)], [[120, 160, 230], 0.1 * day * (1 - gold)]]),
+          over([[[0, 2, 14], 0.16 * (1 - day)], [[255, 140, 80], 0.16 * gold]])];
+      }
+      return [over([[[18, 28, 70], 0.2 * (1 - day)], [[255, 255, 255], 0.1 * day * (1 - gold)]]),
+        over([[[18, 28, 70], 0.12 * (1 - day)], [[255, 150, 80], 0.16 * gold]])];
+    }
+    /** 天色's scheme for the sun now: light while it is up. */
+    const sunScheme = (s = sunNow()) => (s.alt >= 0 ? 'light' : 'dark');
+    /** The clock: every minute (and on waking or switching back to the tab)
+     * write 天色's sky variables and, for another theme with 随时间 on, the
+     * tint; tell the theme store so 天色 can flip its scheme at the horizon. */
+    function timeOfDay(themes) {
+      const body = document.body;
+      const props = [...Array.from({ length: DS_N }, (_, i) => `--cm-ds-${i}`), '--cm-ds-sun', '--cm-ds-sun-y', '--cm-tod-a', '--cm-tod-b'];
+      const run = () => {
+        const s = sunNow();
+        const t = themes.theme();
+        const sky = themes.sky();
+        const timeOn = !!sky.time;
+        // 天色: the sky follows the sun; with 随时间 off it holds a still day
+        // (light) or a late dusk (dark)
+        const side = t.id === 'daysky' && timeOn ? sunScheme(s) : (themes.scheme() || 'light');
+        const still = side === 'light' ? { alt: 30, rising: false } : { alt: -10, rising: false };
+        const d = daySky(t.id === 'daysky' && !timeOn ? still : s, side);
+        d.stops.forEach((c, i) => body.style.setProperty(`--cm-ds-${i}`, c));
+        body.style.setProperty('--cm-ds-sun', d.sun);
+        body.style.setProperty('--cm-ds-sun-y', d.sunY);
+        if (timeOn && t.id !== 'daysky') {
+          const [a, b] = todTint(s, themes.scheme() || 'light');
+          body.style.setProperty('--cm-tod-a', a);
+          body.style.setProperty('--cm-tod-b', b);
+        } else {
+          body.style.removeProperty('--cm-tod-a');
+          body.style.removeProperty('--cm-tod-b');
+        }
+        themes.autoTick();
+      };
+      run();
+      const iv = setInterval(run, 60000);
+      const onVis = () => { if (document.visibilityState === 'visible') run(); };
+      document.addEventListener('visibilitychange', onVis);
+      const off = themes.subscribe(run);
+      return () => {
+        clearInterval(iv);
+        document.removeEventListener('visibilitychange', onVis);
+        off();
+        for (const p of props) body.style.removeProperty(p);
+      };
+    }
 
     /** A fold button on DSH's goal bar (the 目标 strip over the composer). The bar
      * is DSH's, so the button is added to its action row from outside: an
@@ -3383,6 +3600,8 @@ body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] [class*="_u
       };
       // the scheme a theme shows for the current mode (one-scheme themes pin theirs)
       const schemeFor = (t) => {
+        // 天色 with 随时间 on: the sun decides
+        if (t.auto && skyOf_(t.id).time) return sunScheme();
         let s = state.mode === 'system' ? (mq?.matches ? 'dark' : 'light') : state.mode;
         return t.schemes.includes(s) ? s : t.schemes[0];
       };
@@ -3496,13 +3715,26 @@ body[data-cm-wp]:not([data-hanmo-native]) ${F} [class*="_centerCol"] [class*="_u
           notify();
           return true;
         },
-        /** Where the current theme's sky gradient goes: { sb, main }. */
+        /** Where the current theme's sky gradient goes: { sb, main, time }. */
         sky: () => skyOf_(state.id),
+        /** The scheme the current theme shows now. */
+        scheme: () => { const t = byId(state.id); return t ? schemeFor(t) : null; },
+        /** Whether the current theme sets its own light / dark (天色 with 随时间). */
+        auto: () => { const t = byId(state.id); return !!(t && t.auto && skyOf_(t.id).time); },
+        /** The clock ticked: 天色 re-asserts its scheme when the sun crossed. */
+        autoTick() {
+          const t = byId(state.id);
+          if (!t || !t.auto) return;
+          syncing = true;
+          try { push(); } finally { syncing = false; }
+        },
         setSky(patch) {
           const skies = { ...(state.skies || {}), [state.id]: { ...skyOf_(state.id), ...patch } };
           state = { ...state, skies };
           save();
           paint();
+          // 天色: turning 随时间 on or off hands light / dark to the sun or back
+          if ('time' in patch) { syncing = true; try { push(); } finally { syncing = false; } }
           notify();
         },
         /** Text colour for the current theme (each theme remembers its own). */
@@ -3664,6 +3896,15 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 /* 渐变天空: two switch tiles, each a miniature window that shows the sky
  * where that switch puts it */
 .cm-ap-sky { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 360px; }
+.cm-ap-time { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; max-width: 360px; margin-top: 8px;
+  padding: 7px 10px; border-radius: 10px; border: 1px solid var(--ap-edge); background: transparent; color: inherit; font: inherit; cursor: pointer; text-align: left; }
+.cm-ap-time:hover { border-color: var(--ap-hot); }
+.cm-ap-time:focus-visible { outline: none; box-shadow: var(--ap-glow); }
+.cm-ap-time > span { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.cm-ap-time > span > small { font-size: 11px; color: var(--dsw-alias-label-tertiary); }
+.cm-ap-time > em { flex: none; font-style: normal; font-size: 11px; padding: 0 6px; border-radius: 99px; line-height: 16px; color: var(--dsw-alias-label-tertiary); }
+.cm-ap-time[aria-checked="true"] { border-color: var(--ap-hot); }
+.cm-ap-time[aria-checked="true"] > em { color: var(--ap-accent); background: var(--ap-soft); }
 .cm-ap-sky-tile { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 10px;
   border: 1px solid var(--ap-edge); background: none; cursor: pointer; font: inherit; color: var(--dsw-alias-label-secondary);
   text-align: left; transition: border-color .18s, box-shadow .18s, transform .18s cubic-bezier(.32, .72, 0, 1); }
@@ -3829,9 +4070,20 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
         h('span', null, label, h('em', null, on ? '开' : '关')));
       };
       void ts;
-      return h('div', { className: 'cm-ap-sky', role: 'group', 'aria-label': '渐变天空' },
-        tile('sb', '侧边栏', '左侧侧边栏铺满从天顶到地平线的渐变'),
-        tile('main', '主面板', '对话区铺一层更柔和的同色渐变，正文仍然清晰'));
+      const timeOn = !!sky.time;
+      const timeHint = t.auto
+        ? '按你所在时区的城市和真实时间计算太阳高度，天空从黎明、白天、黄昏到夜晚连续变化；日出后自动用浅色，日落后自动用深色'
+        : '保持你选的明暗，天空随真实时间变化：白天偏亮，夜晚偏暗，日出日落时地平线偏暖';
+      return h(React.Fragment, null,
+        h('div', { className: 'cm-ap-sky', role: 'group', 'aria-label': '渐变天空' },
+          tile('sb', '侧边栏', '左侧侧边栏铺满从天顶到地平线的渐变'),
+          tile('main', '主面板', '对话区铺一层更柔和的同色渐变，正文仍然清晰')),
+        h('button', {
+          type: 'button', role: 'switch', 'aria-checked': String(timeOn), className: 'cm-ap-time',
+          title: timeHint, onClick: () => themes.setSky({ time: !timeOn }),
+        },
+        h('span', null, '随时间变化', h('small', null, t.auto ? '天空与明暗跟着日出日落走' : '白天偏亮、夜晚偏暗')),
+        h('em', null, timeOn ? '开' : '关')));
     }
     function AppearanceControls({ bridge, look, themes, wallpaper }) {
       const snap = React.useSyncExternalStore(bridge.subscribe, bridge.snapshot);
@@ -3940,11 +4192,13 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
         h('p', { className: 'cm-ap-sec' }, '明暗'),
         h('div', { className: 'cm-ap-seg', role: 'radiogroup', 'aria-label': '明暗' },
           [['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']].map(([id, label]) =>
-            // a single-scheme theme pins the scheme it has
-            radio(ts.mode === id, () => themes.setMode(id), label, {
+            // a single-scheme theme pins the scheme it has; 天色 with 随时间
+            // on follows the sun instead
+            radio(themes.auto() ? themes.scheme() === id : ts.mode === id, () => themes.setMode(id), label, {
               key: id,
-              disabled: themes.theme().schemes.length < 2 && id !== themes.theme().schemes[0],
-              title: themes.theme().schemes.length < 2 && id !== themes.theme().schemes[0] ? `${themes.theme().label} 只有${themes.theme().schemes[0] === 'dark' ? '深色' : '浅色'}版` : undefined,
+              disabled: themes.auto() || (themes.theme().schemes.length < 2 && id !== themes.theme().schemes[0]),
+              title: themes.auto() ? '天色主题随日出日落自动切换明暗；关掉「随时间变化」后可手动选择'
+                : themes.theme().schemes.length < 2 && id !== themes.theme().schemes[0] ? `${themes.theme().label} 只有${themes.theme().schemes[0] === 'dark' ? '深色' : '浅色'}版` : undefined,
             }))),
         // DeepSeek Harness is DSH as shipped: the plugin's own controls are
         // hidden there, since each one would change that look
@@ -5400,6 +5654,8 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           const offMedia = themes.watchMedia();
           return () => { off(); offMedia(); themes.clear(); };
         });
+        // the real sun: 天色's sky and the 随时间 tint, every minute
+        ctx.effect(() => timeOfDay(themes), 'hanmo: time of day');
 
         // the user's wallpaper: loaded from IndexedDB, re-applied when the
         // DeepSeek Harness (native) theme comes or goes, removed on unload
