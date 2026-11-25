@@ -20,6 +20,8 @@ Full 33-second film: [hanmo-daynight.mp4](https://github.com/xiaonerner0821/dsh-
 - **Queued message fold**: each message queued above the composer while a turn runs (scheduled reminders included) can fold to a single line, full text in its tooltip.
 - **Appearance popover** in the session header: theme, light/dark/system, UI and code fonts, font sizes, body text weight and code weight, body text colour (remembered per theme) and panel opacity. **Reset** returns everything to Han.
 - **File preview tab** next to Conversation / Trajectory, with Shiki highlighting, a sticky tab bar and a diff toolbar. Opening a diff opens the right panel without closing a sidebar that is already open.
+- **HTML preview**: .html / .htm files render as a page in the file preview (with Source, Edit and Refresh). The page runs in an isolated sandbox: scripts run, but cannot reach DSH's session, storage or API. Stylesheets, scripts and images it references are loaded with it, and files it reads at run time by relative path (a Markdown article, images, audio) are fetched on its behalf, inside the working directory only and never dot files.
+- **Web links over the main panel**: a web link from the conversation opens DSH's own browser tab laid over the main panel (from the conversation column to the window edge); switching to another sidebar tab or closing the browser restores the layout. Needs DSH's built-in Browser plugin enabled and Settings > General > link opening set to the in-app sidebar.
 - **Offline**: no CDN requests. The Latin subsets of Inter and Geist Mono are embedded; Chinese text uses locally installed fonts.
 
 ## Requirements
