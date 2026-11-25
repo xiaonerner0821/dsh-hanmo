@@ -5936,13 +5936,23 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
             document.body.toggleAttribute('data-cm-link-view', on);
             if (!on) for (const k of ['--cm-link-x', '--cm-link-y', '--cm-link-w', '--cm-link-h']) document.body.style.removeProperty(k);
           };
+          // DSH's fullscreen mode lays the panel over the whole window and hides
+          // the conversation column, so its rectangle cannot be measured. A
+          // session that was left in that mode (an earlier build, or F11) is
+          // taken out of it first, then the overlay is pinned.
+          const inFullscreen = () => { try { const s = sr.mountedSurface && sr.mountedSurface(); return !!(s && s.layout && s.layout.mode === 'fullscreen'); } catch { return false; } };
+          const leaveFullscreen = () => { try { if (!sr.isExpanded()) sr.toggleExpanded(); const tg = sr.commandTarget && sr.commandTarget(null); if (tg && tg.host !== 'float') sr.toggleFullscreen(tg); } catch { /* DSH changed */ } };
+          let settled = 0;
           const linkTick = () => {
             let tab, exp;
             try { exp = sr.isExpanded(); tab = exp ? sr.active() : undefined; } catch { linkOn(false); return; }
             const browserUp = !!(exp && tab && tab.kind === 'browser' && panelEl());
             if (linkView.pending) {
-              if (Date.now() - linkView.pending > 4000) linkView.pending = 0;
-              else if (browserUp) { linkView.pending = 0; if (placeOver()) linkOn(true); }
+              if (Date.now() - linkView.pending > 6000) { linkView.pending = 0; return; }
+              if (!browserUp) return;
+              if (inFullscreen() && Date.now() - settled > 700) { settled = Date.now(); leaveFullscreen(); return; }
+              linkView.pending = 0;
+              if (placeOver()) linkOn(true);
               return;
             }
             if (linkView.on) {
