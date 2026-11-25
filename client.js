@@ -4530,6 +4530,86 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
       avif: 'image/avif', ico: 'image/x-icon', bmp: 'image/bmp', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
       mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', json: 'application/json' };
+    /* The bridge the sandboxed page talks through. A page that loads its
+     * content at run time (fetch / XHR of a relative path, images and audio it
+     * inserts later) cannot authenticate to the file route itself, so this
+     * script, first in the document, hands every relative request to the
+     * parent by postMessage and turns the answer into a Response, an XHR
+     * result, or a blob: URL on the element. Absolute URLs go untouched. */
+    const HTML_BRIDGE = `(() => {
+  const pending = new Map(); let seq = 0;
+  addEventListener('message', (e) => { const d = e.data; if (!d || d.__hanmo !== 'res') return; const f = pending.get(d.id); if (f) { pending.delete(d.id); f(d); } });
+  const baseDir = document.baseURI.replace(/[?#].*$/, '').replace(/[^/]*$/, '');
+  const rel = (u) => {
+    if (u == null) return null; u = String(u);
+    if (/^(?:[a-z][a-z\\d+.-]*:|\\/\\/|#)/i.test(u)) return u.startsWith(baseDir) && !u.startsWith(baseDir + 'api/') ? u.slice(baseDir.length) : null;
+    return u;
+  };
+  const ask = (url, method) => new Promise((res) => { const id = ++seq; pending.set(id, res); parent.postMessage({ __hanmo: 'req', id, url, method }, '*'); });
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    const raw = typeof input === 'string' || input instanceof URL ? String(input) : input && input.url;
+    const r = rel(raw);
+    if (r == null) return nativeFetch(input, init);
+    const method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+    return ask(r, method).then((d) => {
+      if (!d.status) throw new TypeError('Failed to fetch');
+      return new Response(method === 'HEAD' || d.status === 204 ? null : d.body, { status: d.status, headers: { 'content-type': d.type || '' } });
+    });
+  };
+  const NX = window.XMLHttpRequest;
+  class X extends EventTarget {
+    constructor() { super(); this._x = null; this.readyState = 0; this.status = 0; this.statusText = ''; this.response = null; this.responseText = ''; this.responseType = ''; this.responseURL = ''; this.timeout = 0; this.withCredentials = false; this._type = ''; }
+    _fire(n) { const ev = new Event(n); const h = this['on' + n]; if (typeof h === 'function') h.call(this, ev); this.dispatchEvent(ev); }
+    open(m, u, async) {
+      const r = rel(u);
+      if (r == null) { const x = this._x = new NX(); const self = this; x.open(m, u, async !== false);
+        ['readystatechange', 'load', 'error', 'abort', 'loadend', 'progress', 'timeout'].forEach((n) => x.addEventListener(n, () => { ['readyState', 'status', 'statusText', 'responseURL'].forEach((k) => { self[k] = x[k]; }); try { self.response = x.response; } catch (e) {} try { self.responseText = x.responseText; } catch (e) {} self._fire(n); }));
+        return; }
+      this._m = String(m || 'GET').toUpperCase(); this._u = r; this.readyState = 1; this._fire('readystatechange');
+    }
+    setRequestHeader(k, v) { if (this._x) this._x.setRequestHeader(k, v); }
+    overrideMimeType(t) { if (this._x) this._x.overrideMimeType(t); }
+    getResponseHeader(k) { if (this._x) return this._x.getResponseHeader(k); return /^content-type$/i.test(k) ? this._type : null; }
+    getAllResponseHeaders() { if (this._x) return this._x.getAllResponseHeaders(); return this._type ? 'content-type: ' + this._type + '\\r\\n' : ''; }
+    abort() { if (this._x) this._x.abort(); this._aborted = true; }
+    send(body) {
+      if (this._x) { this._x.responseType = this.responseType; this._x.timeout = this.timeout; this._x.send(body); return; }
+      ask(this._u, this._m).then(async (d) => {
+        if (this._aborted) return;
+        this.status = d.status || 0; this.statusText = d.status === 200 ? 'OK' : ''; this._type = d.type || '';
+        const buf = d.body || new ArrayBuffer(0);
+        const text = () => new TextDecoder().decode(buf);
+        if (this.responseType === 'arraybuffer') this.response = buf;
+        else if (this.responseType === 'blob') this.response = new Blob([buf], { type: this._type });
+        else if (this.responseType === 'json') { try { this.response = JSON.parse(text()); } catch (e) { this.response = null; } }
+        else { this.responseText = text(); this.response = this.responseText; }
+        this.readyState = 4; this._fire('readystatechange');
+        this._fire(d.status ? 'load' : 'error'); this._fire('loadend');
+      });
+    }
+  }
+  X.UNSENT = 0; X.OPENED = 1; X.HEADERS_RECEIVED = 2; X.LOADING = 3; X.DONE = 4;
+  window.XMLHttpRequest = X;
+  // elements the page adds later with a relative src / href
+  const ATTRS = { IMG: ['src'], AUDIO: ['src'], VIDEO: ['src', 'poster'], SOURCE: ['src'], TRACK: ['src'], EMBED: ['src'], INPUT: ['src'], LINK: ['href'], OBJECT: ['data'] };
+  const fix = (el) => {
+    const list = ATTRS[el.tagName]; if (!list) return;
+    if (el.tagName === 'LINK' && !/stylesheet|icon/i.test(el.rel || '')) return;
+    el.__hanmo = el.__hanmo || {};
+    for (const a of list) {
+      const v = el.getAttribute(a); const r = rel(v);
+      if (r == null || el.__hanmo[a] === v) continue;
+      el.__hanmo[a] = v;
+      ask(r, 'GET').then((d) => { if (d.status === 200 && d.body && el.getAttribute(a) === v) { const u = URL.createObjectURL(new Blob([d.body], { type: d.type || '' })); el.__hanmo[a] = u; el.setAttribute(a, u); } });
+    }
+  };
+  const scan = (root) => { if (root.nodeType !== 1) return; fix(root); root.querySelectorAll && root.querySelectorAll('img,audio,video,source,track,embed,input,link,object').forEach(fix); };
+  new MutationObserver((ms) => { for (const m of ms) { if (m.type === 'attributes') fix(m.target); else m.addedNodes.forEach(scan); } })
+    .observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['src', 'href', 'poster', 'data'] });
+  document.addEventListener('DOMContentLoaded', () => scan(document.documentElement));
+})();`;
+    const HTML_REQ_CAP = 96 * 1024 * 1024;
     /** The HTML document, self-contained: relative assets inlined. */
     async function bundleHtml(text, absPath, signal) {
       const dir = absPath ? dirOf(absPath) : '';
@@ -4606,11 +4686,46 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       csp.setAttribute('http-equiv', 'Content-Security-Policy');
       csp.setAttribute('content', HTML_CSP);
       head.prepend(csp);
+      const bridge = doc.createElement('script');
+      bridge.textContent = HTML_BRIDGE;
+      csp.after(bridge);
       if (!doc.querySelector('meta[charset]')) { const cs = doc.createElement('meta'); cs.setAttribute('charset', 'utf-8'); head.prepend(cs); }
       return `<!doctype html>\n${doc.documentElement.outerHTML}`;
     }
-    function HtmlPreview({ text, absolutePath, reloadKey }) {
+    function HtmlPreview({ text, absolutePath, relPath, reloadKey }) {
       const [st, setSt] = React.useState({ html: null, error: null });
+      const frame = React.useRef(null);
+      // the frame may read files of this working directory only, and never a
+      // dot file or anything under a dot folder (.env, .git, .ssh ...)
+      React.useEffect(() => {
+        if (!absolutePath) return undefined;
+        const norm = (s) => s.replace(/\\/g, '/');
+        const abs = norm(absolutePath);
+        const relN = relPath ? norm(relPath).replace(/^\.\//, '') : '';
+        const root = relN && abs.toLowerCase().endsWith(`/${relN.toLowerCase()}`) ? abs.slice(0, abs.length - relN.length - 1) : dirOf(abs);
+        const dir = dirOf(absolutePath);
+        const inside = (p) => { const q = norm(p).toLowerCase(); const r = root.toLowerCase(); return q === r || q.startsWith(`${r}/`); };
+        const onMsg = async (e) => {
+          const d = e.data;
+          if (!d || d.__hanmo !== 'req' || !frame.current || e.source !== frame.current.contentWindow) return;
+          const reply = (msg, transfer) => { try { e.source.postMessage({ __hanmo: 'res', id: d.id, ...msg }, '*', transfer || []); } catch { /* frame gone */ } };
+          const target = joinPath(dir, String(d.url || ''));
+          const under = norm(target).slice(root.length);
+          if (!inside(target) || /(^|\/)\./u.test(under) || (d.method !== 'GET' && d.method !== 'HEAD')) { reply({ status: 403 }); return; }
+          try {
+            const res = await fetch(fileRouteUrl(target), { credentials: 'same-origin' });
+            if (!res.ok) { reply({ status: res.status === 401 ? 403 : res.status }); return; }
+            const type = MIME_BY_EXT[extOf(target)] || res.headers.get('content-type') || '';
+            if (d.method === 'HEAD') { try { res.body && res.body.cancel(); } catch { /* ignore */ } reply({ status: 200, type }); return; }
+            const size = Number(res.headers.get('content-length') || 0);
+            if (size > HTML_REQ_CAP) { try { res.body && res.body.cancel(); } catch { /* ignore */ } reply({ status: 413 }); return; }
+            const body = await res.arrayBuffer();
+            reply({ status: 200, type, body }, [body]);
+          } catch { reply({ status: 0 }); }
+        };
+        window.addEventListener('message', onMsg);
+        return () => window.removeEventListener('message', onMsg);
+      }, [absolutePath, relPath]);
       React.useEffect(() => {
         const ac = new AbortController();
         setSt({ html: null, error: null });
@@ -4622,7 +4737,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       if (st.html == null) return h('div', { className: 'mf-empty' }, h('p', null, '页面渲染中…'));
       return h('div', { className: 'mf-web' },
         h('iframe', {
-          key: reloadKey, className: 'mf-web-frame', title: 'HTML 预览', srcDoc: st.html,
+          key: reloadKey, ref: frame, className: 'mf-web-frame', title: 'HTML 预览', srcDoc: st.html,
           sandbox: 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms',
           referrerPolicy: 'no-referrer',
         }));
@@ -4849,7 +4964,7 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
         return h(React.Fragment, null,
           h('div', { className: 'mf-sub' }, toolbar,
             h('span', { className: 'mf-web-note', title: '页面在隔离沙箱里运行：可以执行脚本，但不能访问 DSH 的登录状态、存储和接口；同目录引用的样式、脚本和图片已一并载入' }, '沙箱预览')),
-          st.eof ? h(HtmlPreview, { text: st.text, absolutePath: st.absolutePath, reloadKey: webKey })
+          st.eof ? h(HtmlPreview, { text: st.text, absolutePath: st.absolutePath, relPath: file.path, reloadKey: webKey })
             : h('div', { className: 'mf-empty' }, h('p', null, st.error ? `读取失败：${st.error}` : '读取中…')));
       }
       let body;
