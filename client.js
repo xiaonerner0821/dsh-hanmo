@@ -4496,6 +4496,137 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
     const EDIT_ROUTE = 'api/hanmo.edit';
     const MD_EXT = new Set(['md', 'markdown', 'mdx', 'mdown', 'mkd']);
     const isMarkdown = (path) => MD_EXT.has(extOf(path));
+    const HTML_EXT = new Set(['html', 'htm', 'xhtml']);
+    const isHtml = (path) => HTML_EXT.has(extOf(path));
+    const HTML_MODE_KEY = 'hanmo:html-mode';
+    const LINK_FULL_KEY = 'hanmo:link-fullscreen';
+    const linkFullscreen = () => { try { return localStorage.getItem(LINK_FULL_KEY) !== '0'; } catch { return true; } };
+    /* HTML preview. The page runs in an iframe sandboxed without
+     * allow-same-origin: an opaque origin, so its scripts cannot read DSH's
+     * cookies, storage or DOM. A CSP in the document also refuses connections
+     * except https / wss, so a page's script cannot reach DSH's own API on
+     * http://127.0.0.1 either. Files the page references by relative path
+     * (stylesheets, scripts, images, fonts, CSS url()s) are read here, through
+     * the same authenticated file route the Markdown images use, and inlined:
+     * the sandboxed page could not authenticate to fetch them itself. */
+    const HTML_CSP = "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; connect-src https: wss: data: blob:; form-action 'none'; base-uri 'none'";
+    const HTML_ASSET_CAP = 24 * 1024 * 1024;
+    const isRelativeRef = (ref) => !!ref && !/^(?:[a-z][a-z\d+.-]*:|\/\/|#|data:|blob:)/iu.test(ref.trim());
+    function joinPath(dir, ref) {
+      const clean = ref.trim().replace(/[?#].*$/u, '');
+      let decoded;
+      try { decoded = decodeURIComponent(clean); } catch { decoded = clean; }
+      const sep = dir.includes('\\') && !dir.includes('/') ? '\\' : '/';
+      const parts = (isAbsPath(decoded) ? decoded : `${dir}${sep}${decoded}`).split(/[/\\]+/u);
+      const out = [];
+      for (const seg of parts) {
+        if (seg === '..') { if (out.length > 1) out.pop(); } else if (seg !== '.' && seg !== '') out.push(seg);
+      }
+      const lead = /^[/\\]/u.test(dir) ? sep : '';
+      return lead + out.join(sep);
+    }
+    const dirOf = (path) => path.replace(/[/\\][^/\\]*$/u, '');
+    const fileRouteUrl = (abs) => new URL(`api/file?path=${encodeURIComponent(abs)}`, document.baseURI).href;
+    const MIME_BY_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml',
+      avif: 'image/avif', ico: 'image/x-icon', bmp: 'image/bmp', woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', otf: 'font/otf',
+      mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', mp4: 'video/mp4', webm: 'video/webm', json: 'application/json' };
+    /** The HTML document, self-contained: relative assets inlined. */
+    async function bundleHtml(text, absPath, signal) {
+      const dir = absPath ? dirOf(absPath) : '';
+      let budget = HTML_ASSET_CAP;
+      const cache = new Map();
+      const fetchAsset = (abs, as) => {
+        const key = `${as}:${abs}`;
+        if (!cache.has(key)) {
+          cache.set(key, fetch(fileRouteUrl(abs), { credentials: 'same-origin', signal }).then(async (res) => {
+            if (!res.ok) return null;
+            const blob = await res.blob();
+            if (blob.size > budget) return null;
+            budget -= blob.size;
+            if (as === 'text') return blob.text();
+            const type = MIME_BY_EXT[extOf(abs)] || blob.type || 'application/octet-stream';
+            const buf = new Uint8Array(await blob.arrayBuffer());
+            let bin = '';
+            for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+            return `data:${type};base64,${btoa(bin)}`;
+          }).catch(() => null));
+        }
+        return cache.get(key);
+      };
+      // url(...) inside a stylesheet, relative to that stylesheet
+      const inlineCssUrls = async (css, base) => {
+        const jobs = [];
+        css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (m, q, ref) => { if (isRelativeRef(ref)) jobs.push(ref); return m; });
+        const map = new Map();
+        await Promise.all([...new Set(jobs)].map(async (ref) => { map.set(ref, await fetchAsset(joinPath(base, ref), 'data')); }));
+        return css.replace(/url\(\s*(['"]?)([^'")]+)\1\s*\)/giu, (m, q, ref) => (map.get(ref) ? `url("${map.get(ref)}")` : m));
+      };
+      const doc = new DOMParser().parseFromString(text, 'text/html');
+      if (dir) {
+        const work = [];
+        for (const el of doc.querySelectorAll('link[rel~="stylesheet" i][href]')) {
+          const ref = el.getAttribute('href');
+          if (!isRelativeRef(ref)) continue;
+          const abs = joinPath(dir, ref);
+          work.push(fetchAsset(abs, 'text').then(async (css) => {
+            if (css == null) return;
+            const style = doc.createElement('style');
+            style.textContent = await inlineCssUrls(css, dirOf(abs));
+            if (el.media) style.media = el.media;
+            el.replaceWith(style);
+          }));
+        }
+        for (const el of doc.querySelectorAll('script[src]')) {
+          const ref = el.getAttribute('src');
+          if (!isRelativeRef(ref)) continue;
+          work.push(fetchAsset(joinPath(dir, ref), 'text').then((js) => {
+            if (js == null) return;
+            el.removeAttribute('src');
+            el.textContent = js.replace(/<\/script/giu, '<\\/script');
+          }));
+        }
+        for (const el of doc.querySelectorAll('style')) {
+          work.push(inlineCssUrls(el.textContent || '', dir).then((css) => { el.textContent = css; }));
+        }
+        for (const el of doc.querySelectorAll('img[src], source[src], video[src], audio[src], video[poster], input[type="image" i][src], link[rel~="icon" i][href]')) {
+          for (const attr of ['src', 'poster', 'href']) {
+            const ref = el.getAttribute(attr);
+            if (!isRelativeRef(ref) || (attr === 'href' && el.tagName !== 'LINK')) continue;
+            work.push(fetchAsset(joinPath(dir, ref), 'data').then((url) => { if (url) el.setAttribute(attr, url); }));
+          }
+        }
+        for (const el of doc.querySelectorAll('[style*="url(" i]')) {
+          work.push(inlineCssUrls(el.getAttribute('style') || '', dir).then((css) => el.setAttribute('style', css)));
+        }
+        await Promise.all(work);
+      }
+      const head = doc.head || doc.documentElement.insertBefore(doc.createElement('head'), doc.body);
+      for (const old of doc.querySelectorAll('meta[http-equiv="Content-Security-Policy" i], base')) old.remove();
+      const csp = doc.createElement('meta');
+      csp.setAttribute('http-equiv', 'Content-Security-Policy');
+      csp.setAttribute('content', HTML_CSP);
+      head.prepend(csp);
+      if (!doc.querySelector('meta[charset]')) { const cs = doc.createElement('meta'); cs.setAttribute('charset', 'utf-8'); head.prepend(cs); }
+      return `<!doctype html>\n${doc.documentElement.outerHTML}`;
+    }
+    function HtmlPreview({ text, absolutePath, reloadKey }) {
+      const [st, setSt] = React.useState({ html: null, error: null });
+      React.useEffect(() => {
+        const ac = new AbortController();
+        setSt({ html: null, error: null });
+        bundleHtml(text, absolutePath, ac.signal).then((html) => { if (!ac.signal.aborted) setSt({ html, error: null }); },
+          (e) => { if (!ac.signal.aborted) setSt({ html: null, error: errText(e) }); });
+        return () => ac.abort();
+      }, [text, absolutePath, reloadKey]);
+      if (st.error) return h('div', { className: 'mf-empty' }, h('p', null, `无法预览这份 HTML：${st.error}`));
+      if (st.html == null) return h('div', { className: 'mf-empty' }, h('p', null, '页面渲染中…'));
+      return h('div', { className: 'mf-web' },
+        h('iframe', {
+          key: reloadKey, className: 'mf-web-frame', title: 'HTML 预览', srcDoc: st.html,
+          sandbox: 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-modals allow-forms',
+          referrerPolicy: 'no-referrer',
+        }));
+    }
     const FRONTMATTER = /^\uFEFF?---[ \t]*\r?\n(?:([\s\S]*?)\r?\n)??(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/u;
     function splitFrontmatter(text) {
       const m = FRONTMATTER.exec(text);
@@ -4648,17 +4779,20 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       const [st, setSt] = React.useState({ text: '', lines: 0, eof: false, loading: true, error: null, absolutePath: undefined });
       const [reloadKey, setReloadKey] = React.useState(0);
       const md = isMarkdown(file.path);
-      // view mode: 'preview' (rendered Markdown) | 'source' | 'edit'
+      const web = isHtml(file.path);
+      const modeKey = web ? HTML_MODE_KEY : MODE_KEY;
+      const [webKey, setWebKey] = React.useState(0);
+      // view mode: 'preview' (rendered Markdown / HTML) | 'source' | 'edit'
       const [mode, setModeState] = React.useState(() => {
         if (fileTabs.drafts.has(file.address)) return 'edit';
-        if (!md) return 'source';
-        try { return localStorage.getItem(MODE_KEY) === 'source' ? 'source' : 'preview'; } catch { return 'preview'; }
+        if (!md && !web) return 'source';
+        try { return localStorage.getItem(modeKey) === 'source' ? 'source' : 'preview'; } catch { return 'preview'; }
       });
-      const viewMode = React.useRef(mode === 'edit' ? (md ? 'preview' : 'source') : mode);
+      const viewMode = React.useRef(mode === 'edit' ? (md || web ? 'preview' : 'source') : mode);
       const setMode = (m) => {
         if (m !== 'edit') {
           viewMode.current = m;
-          if (md) { try { localStorage.setItem(MODE_KEY, m); } catch { /* private mode */ } }
+          if (md || web) { try { localStorage.setItem(modeKey, m); } catch { /* private mode */ } }
           // leaving an untouched editor through the mode strip drops its draft
           if (!fileTabs.dirty.has(file.address)) fileTabs.drafts.delete(file.address);
         }
@@ -4688,12 +4822,17 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       // Markdown preview, the same primitive DSH's sidebar document preview uses
       const split = React.useMemo(() => (md ? splitFrontmatter(st.text) : undefined), [md, st.text]);
       const pathImages = React.useMemo(() => ({ resolve: (dest) => markdownImageUrl(st.absolutePath, dest) }), [st.absolutePath]);
-      const canRender = md && primitives && primitives.MarkdownText;
+      const canRender = (md && primitives && primitives.MarkdownText) || web;
+      // an HTML preview needs the whole document: keep reading pages until done
+      React.useEffect(() => {
+        if (web && mode === 'preview' && !st.loading && !st.error && !st.eof && st.lines > 0 && st.lines < 400000) load(st.lines + 1, st);
+      }, [web, mode, st, load]);
 
       const toolbar = h('div', { className: 'mf-mode', role: 'toolbar', 'aria-label': '查看方式' },
         canRender ? h('button', { type: 'button', className: 'mf-seg', 'aria-pressed': String(mode === 'preview'), onClick: () => setMode('preview'), disabled: mode === 'edit' && fileTabs.dirty.has(file.address) }, '预览') : null,
         canRender ? h('button', { type: 'button', className: 'mf-seg', 'aria-pressed': String(mode === 'source'), onClick: () => setMode('source'), disabled: mode === 'edit' && fileTabs.dirty.has(file.address) }, '源码') : null,
-        h('button', { type: 'button', className: 'mf-seg mf-seg-edit', 'aria-pressed': String(mode === 'edit'), onClick: () => setMode('edit'), disabled: mode === 'edit' }, '编辑'));
+        h('button', { type: 'button', className: 'mf-seg mf-seg-edit', 'aria-pressed': String(mode === 'edit'), onClick: () => setMode('edit'), disabled: mode === 'edit' }, '编辑'),
+        web && mode === 'preview' ? h('button', { type: 'button', className: 'mf-seg', title: '重新读取文件并刷新页面', onClick: () => { setWebKey((k) => k + 1); setReloadKey((k) => k + 1); } }, '刷新') : null);
 
       if (mode === 'edit') {
         return h(EditBody, {
@@ -4706,8 +4845,15 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
           h('p', null, `无法在主面板预览：${st.error}`),
           h('button', { type: 'button', className: 'mf-btn', onClick: () => sendToSidebar(file.address) }, '在侧边栏中打开'));
       }
+      if (web && mode === 'preview') {
+        return h(React.Fragment, null,
+          h('div', { className: 'mf-sub' }, toolbar,
+            h('span', { className: 'mf-web-note', title: '页面在隔离沙箱里运行：可以执行脚本，但不能访问 DSH 的登录状态、存储和接口；同目录引用的样式、脚本和图片已一并载入' }, '沙箱预览')),
+          st.eof ? h(HtmlPreview, { text: st.text, absolutePath: st.absolutePath, reloadKey: webKey })
+            : h('div', { className: 'mf-empty' }, h('p', null, st.error ? `读取失败：${st.error}` : '读取中…')));
+      }
       let body;
-      if (canRender && mode === 'preview') {
+      if (canRender && md && mode === 'preview') {
         body = h(MdPreview, null,
           split ? h('pre', { className: 'mf-front' }, split.source) : null,
           h(primitives.MarkdownText, { text: split ? split.body : st.text, streaming: !st.eof, labels: MD_LABELS, pathImages }));
@@ -5382,6 +5528,9 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 [data-conversation-scroll]:has(.mf-root){position:relative}
 [data-conversation-scroll]:has(.mf-root)>[class*="_composerSeat"]{position:absolute;left:0;right:var(--dsh-scrollbar-width,0px);bottom:0;z-index:8}
 .mf-scroll{padding-bottom:var(--mf-dock,0px)}
+.mf-web{flex:1;min-height:0;display:flex;padding-bottom:var(--mf-dock,0px)}
+.mf-web-frame{flex:1;width:100%;min-height:0;border:0;background:#fff;color-scheme:light}
+.mf-web-note{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-tertiary);padding:2px 8px;border-radius:99px;background:color-mix(in srgb,var(--dsw-alias-label-primary) 6%,transparent)}
 /* session stats under the composer (「N 轮 N 步」「tok/s」…): DSH draws them in
    label-tertiary, too faint. Mix from label-primary so every palette and both
    themes stay legible without per-palette values. */
@@ -5632,6 +5781,48 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
             owner.openResource = wrapped;
             sub.effect(() => () => { if (owner.openResource === wrapped) owner.openResource = original; });
           }
+          // A web link from the conversation opens DSH's own browser tab (on
+          // the desktop a real <webview>, so sites that refuse to be framed
+          // still load); hanmo then switches the right sidebar to DSH's own
+          // fullscreen mode, which lays it over the main panel. Nothing is
+          // moved, so the page keeps its state and DSH keeps every control.
+          // Leaving the browser (another tab, or closing it) restores the
+          // layout, but only when hanmo was the one that changed it.
+          const linkView = { pending: 0, ours: null };
+          const tabOwner = (() => { let o = sr; try { while (o && !Object.prototype.hasOwnProperty.call(o, 'openTab')) o = Object.getPrototypeOf(o); } catch { o = null; } return o; })();
+          const origOpenTab = tabOwner && typeof tabOwner.openTab === 'function' ? tabOwner.openTab : null;
+          if (origOpenTab) {
+            const wrappedTab = function (kind, options) {
+              const r = origOpenTab.apply(this, arguments);
+              if (kind === 'browser' && options && options.params && options.params.url && linkFullscreen()) linkView.pending = Date.now();
+              return r;
+            };
+            tabOwner.openTab = wrappedTab;
+            sub.effect(() => () => { if (tabOwner.openTab === wrappedTab) tabOwner.openTab = origOpenTab; });
+          }
+          const modeOf = () => { try { const s = sr.mountedSurface && sr.mountedSurface(); return s && s.layout ? s.layout.mode : undefined; } catch { return undefined; } };
+          const flip = () => { try { const tg = sr.commandTarget && sr.commandTarget(null); if (tg && tg.host !== 'float') sr.toggleFullscreen(tg); } catch { /* DSH changed */ } };
+          const linkTick = () => {
+            if (window.innerWidth < 768) { linkView.pending = 0; return; } // DSH is fullscreen there anyway
+            let tab, exp;
+            try { exp = sr.isExpanded(); tab = exp ? sr.active() : undefined; } catch { return; }
+            const mode = modeOf();
+            if (linkView.pending) {
+              if (Date.now() - linkView.pending > 3000) linkView.pending = 0;
+              else if (exp && tab && tab.kind === 'browser') {
+                linkView.pending = 0;
+                if (mode !== 'fullscreen') { flip(); linkView.ours = tab.id; }
+              }
+              return;
+            }
+            if (linkView.ours) {
+              if (mode !== 'fullscreen') { linkView.ours = null; return; } // the user left fullscreen themselves
+              if (exp && tab && tab.kind !== 'browser') { flip(); linkView.ours = null; }
+              else if (exp && !tab) { flip(); linkView.ours = null; }
+            }
+          };
+          const linkTimer = setInterval(linkTick, 150);
+          sub.effect(() => () => clearInterval(linkTimer));
           const seen = new Set();
           let primed = false, wasExpanded = false;
           let lastActive; // the right column's active tab as of the previous poll
