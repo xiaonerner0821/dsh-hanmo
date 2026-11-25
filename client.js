@@ -5923,18 +5923,26 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
             if (!col) return false;
             const r = col.getBoundingClientRect();
             if (r.width < 200 || r.height < 200) return false;
+            // from the conversation column's left edge to the window's right
+            // edge: DSH narrows the column while its right sidebar is open, so
+            // the column alone would leave the sidebar's own strip empty
             const s = document.body.style;
+            const w = Math.max(0, window.innerWidth - Math.round(r.left));
             s.setProperty('--cm-link-x', `${Math.round(r.left)}px`);
             s.setProperty('--cm-link-y', `${Math.round(r.top)}px`);
-            s.setProperty('--cm-link-w', `${Math.round(r.width)}px`);
-            s.setProperty('--cm-link-h', `${Math.round(r.height)}px`);
+            s.setProperty('--cm-link-w', `${w}px`);
+            s.setProperty('--cm-link-h', `${Math.max(0, window.innerHeight - Math.round(r.top))}px`);
+            // an opaque page tone: a sky theme clears DSH's own page colour
+            // under the panels, so take the theme's card fill or the canvas
+            const bg = getComputedStyle(col).getPropertyValue('--cm-fill').trim();
+            s.setProperty('--cm-link-bg', bg || 'Canvas');
             return true;
           };
           const linkOn = (on) => {
             if (linkView.on === on) return;
             linkView.on = on;
             document.body.toggleAttribute('data-cm-link-view', on);
-            if (!on) for (const k of ['--cm-link-x', '--cm-link-y', '--cm-link-w', '--cm-link-h']) document.body.style.removeProperty(k);
+            if (!on) for (const k of ['--cm-link-x', '--cm-link-y', '--cm-link-w', '--cm-link-h', '--cm-link-bg']) document.body.style.removeProperty(k);
           };
           // DSH's fullscreen mode lays the panel over the whole window and hides
           // the conversation column, so its rectangle cannot be measured. A
@@ -5969,10 +5977,12 @@ body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] {
   position: fixed !important; left: var(--cm-link-x) !important; top: var(--cm-link-y) !important;
   width: var(--cm-link-w) !important; height: var(--cm-link-h) !important; right: auto !important; bottom: auto !important;
   max-width: none !important; --dsh-sidebar-width: var(--cm-link-w) !important; z-index: 30 !important;
-  background: var(--dsw-alias-bg-base, #fff) !important; box-shadow: 0 0 0 1px var(--dsw-alias-border-l1, rgba(127,127,127,.2));
+  background: var(--cm-link-bg, Canvas) !important; box-shadow: -1px 0 0 var(--dsw-alias-border-l1, rgba(127,127,127,.2));
+  /* the page tone the panel's own chrome paints with (strip, toolbar) */
+  --dsw-alias-bg-base: var(--cm-link-bg, Canvas); --dsw-specific-sidebar-fill: var(--cm-link-bg, Canvas);
 }
-body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] [data-dockkit-host="dock"] {
-  transform: none !important; background: var(--dsw-alias-bg-base, #fff) !important;
+body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] :is([data-dockkit-host="dock"], [data-dockkit-pane]) {
+  transform: none !important; background: var(--cm-link-bg, Canvas) !important; width: 100% !important; max-width: none !important;
 }
 body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] [data-dockkit-divider] { display: none !important; }
 `;
