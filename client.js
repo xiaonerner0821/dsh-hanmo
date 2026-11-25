@@ -5898,12 +5898,14 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
           }
           // A web link from the conversation opens DSH's own browser tab (on
           // the desktop a real <webview>, so sites that refuse to be framed
-          // still load); hanmo then switches the right sidebar to DSH's own
-          // fullscreen mode, which lays it over the main panel. Nothing is
-          // moved, so the page keeps its state and DSH keeps every control.
-          // Leaving the browser (another tab, or closing it) restores the
-          // layout, but only when hanmo was the one that changed it.
-          const linkView = { pending: 0, ours: null };
+          // still load). hanmo then pins that right-sidebar panel over the
+          // main panel's own rectangle (the center column, from its header
+          // tabs down), opaque, above everything there: DSH's state and
+          // layout are untouched, nothing is moved, so the page keeps its
+          // state and DSH keeps every control. The overlay follows the
+          // column as it resizes, and ends as soon as the browser is no longer
+          // the right sidebar's active tab (another tab, closed, collapsed).
+          const linkView = { pending: 0, on: false };
           const tabOwner = (() => { let o = sr; try { while (o && !Object.prototype.hasOwnProperty.call(o, 'openTab')) o = Object.getPrototypeOf(o); } catch { o = null; } return o; })();
           const origOpenTab = tabOwner && typeof tabOwner.openTab === 'function' ? tabOwner.openTab : null;
           if (origOpenTab) {
@@ -5915,29 +5917,57 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
             tabOwner.openTab = wrappedTab;
             sub.effect(() => () => { if (tabOwner.openTab === wrappedTab) tabOwner.openTab = origOpenTab; });
           }
-          const modeOf = () => { try { const s = sr.mountedSurface && sr.mountedSurface(); return s && s.layout ? s.layout.mode : undefined; } catch { return undefined; } };
-          const flip = () => { try { const tg = sr.commandTarget && sr.commandTarget(null); if (tg && tg.host !== 'float') sr.toggleFullscreen(tg); } catch { /* DSH changed */ } };
+          const panelEl = () => document.querySelector('[data-sidebar-right-session][data-sidebar-right-open]');
+          const placeOver = () => {
+            const col = document.querySelector('[class*="_centerCol"]');
+            if (!col) return false;
+            const r = col.getBoundingClientRect();
+            if (r.width < 200 || r.height < 200) return false;
+            const s = document.body.style;
+            s.setProperty('--cm-link-x', `${Math.round(r.left)}px`);
+            s.setProperty('--cm-link-y', `${Math.round(r.top)}px`);
+            s.setProperty('--cm-link-w', `${Math.round(r.width)}px`);
+            s.setProperty('--cm-link-h', `${Math.round(r.height)}px`);
+            return true;
+          };
+          const linkOn = (on) => {
+            if (linkView.on === on) return;
+            linkView.on = on;
+            document.body.toggleAttribute('data-cm-link-view', on);
+            if (!on) for (const k of ['--cm-link-x', '--cm-link-y', '--cm-link-w', '--cm-link-h']) document.body.style.removeProperty(k);
+          };
           const linkTick = () => {
-            if (window.innerWidth < 768) { linkView.pending = 0; return; } // DSH is fullscreen there anyway
             let tab, exp;
-            try { exp = sr.isExpanded(); tab = exp ? sr.active() : undefined; } catch { return; }
-            const mode = modeOf();
+            try { exp = sr.isExpanded(); tab = exp ? sr.active() : undefined; } catch { linkOn(false); return; }
+            const browserUp = !!(exp && tab && tab.kind === 'browser' && panelEl());
             if (linkView.pending) {
-              if (Date.now() - linkView.pending > 3000) linkView.pending = 0;
-              else if (exp && tab && tab.kind === 'browser') {
-                linkView.pending = 0;
-                if (mode !== 'fullscreen') { flip(); linkView.ours = tab.id; }
-              }
+              if (Date.now() - linkView.pending > 4000) linkView.pending = 0;
+              else if (browserUp) { linkView.pending = 0; if (placeOver()) linkOn(true); }
               return;
             }
-            if (linkView.ours) {
-              if (mode !== 'fullscreen') { linkView.ours = null; return; } // the user left fullscreen themselves
-              if (exp && tab && tab.kind !== 'browser') { flip(); linkView.ours = null; }
-              else if (exp && !tab) { flip(); linkView.ours = null; }
+            if (linkView.on) {
+              if (!browserUp || window.innerWidth < 768 || !placeOver()) linkOn(false);
             }
           };
           const linkTimer = setInterval(linkTick, 150);
-          sub.effect(() => () => clearInterval(linkTimer));
+          const linkCss = document.createElement('style');
+          linkCss.dataset.plugin = '@xiaonerner0821/dsh-hanmo:link-view';
+          linkCss.textContent = `
+/* a link page over the main panel: DSH's right-sidebar panel, moved by CSS
+ * only, to the conversation column's box, opaque, above the column */
+body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] {
+  position: fixed !important; left: var(--cm-link-x) !important; top: var(--cm-link-y) !important;
+  width: var(--cm-link-w) !important; height: var(--cm-link-h) !important; right: auto !important; bottom: auto !important;
+  max-width: none !important; --dsh-sidebar-width: var(--cm-link-w) !important; z-index: 30 !important;
+  background: var(--dsw-alias-bg-base, #fff) !important; box-shadow: 0 0 0 1px var(--dsw-alias-border-l1, rgba(127,127,127,.2));
+}
+body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] [data-dockkit-host="dock"] {
+  transform: none !important; background: var(--dsw-alias-bg-base, #fff) !important;
+}
+body[data-cm-link-view] [data-sidebar-right-session][data-sidebar-right-open] [data-dockkit-divider] { display: none !important; }
+`;
+          document.head.append(linkCss);
+          sub.effect(() => () => { clearInterval(linkTimer); linkOn(false); linkCss.remove(); });
           const seen = new Set();
           let primed = false, wasExpanded = false;
           let lastActive; // the right column's active tab as of the previous poll
