@@ -1159,7 +1159,7 @@ body[data-cm-ui] ${F} [class*="_centerCol"] :is([class*="_headerActions"], [clas
     function beamDuration(w, h, r = 8) { return Math.max(2000, beamPath(w, h, r).total / BEAM_SPEED * 1000); }
 
     function attach(root) {
-      root.setAttribute(ATTR, '1.7.0'); // value = plugin build, handy to confirm a reload took effect
+      root.setAttribute(ATTR, '1.7.1'); // value = plugin build, handy to confirm a reload took effect
       const tracks = new Map(); // container -> { hl, row, s, v, at, raf, restore }
 
       function trackFor(box, kind) {
@@ -4890,6 +4890,57 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
       return h('div', { className: 'mf-md', ref }, children);
     }
 
+    /* File chrome. An extension badge in each tab, tinted by language family
+     * (oklch hues at one lightness, so no family shouts louder than another),
+     * and the path as breadcrumbs: folders muted, the file name in full ink.
+     * When the path is wider than the bar the leading folders slide out under
+     * a fade on the left, so the name always stays in view; a click copies the
+     * whole path. */
+    const EXT_HUE = {
+      md: 175, markdown: 175, mdx: 175, txt: 250, html: 40, htm: 40, xhtml: 40, css: 300, scss: 300, less: 300,
+      js: 85, mjs: 85, cjs: 85, jsx: 85, ts: 245, tsx: 245, json: 145, jsonc: 145, yml: 320, yaml: 320, toml: 320, ini: 320,
+      xml: 15, svg: 15, py: 220, go: 200, rs: 30, java: 25, kt: 290, c: 230, h: 230, cpp: 230, cs: 280, php: 270, rb: 5,
+      sh: 140, ps1: 230, bat: 140, sql: 60, vue: 150, svelte: 25, lua: 250, dart: 205, swift: 30,
+      png: 340, jpg: 340, jpeg: 340, gif: 340, webp: 340, ico: 340, avif: 340, bmp: 340, log: 250, csv: 145,
+    };
+    function ExtBadge({ path }) {
+      const ext = extOf(path);
+      const label = (ext || '·').slice(0, 4).toUpperCase();
+      const hue = EXT_HUE[ext];
+      return h('span', { className: 'mf-ext', 'data-plain': hue == null ? '' : undefined, style: hue == null ? undefined : { '--mf-h': hue }, 'aria-hidden': true }, label);
+    }
+    function PathCrumbs({ path }) {
+      const ref = React.useRef(null);
+      const [over, setOver] = React.useState(false);
+      const [copied, setCopied] = React.useState(false);
+      const parts = String(path || '').split(/[\\/]+/).filter(Boolean);
+      const lead = /^[\\/]/.test(path || '') ? '/' : '';
+      React.useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el) return undefined;
+        const check = () => setOver(el.scrollWidth > el.clientWidth + 1);
+        check();
+        const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(check) : null;
+        if (ro) ro.observe(el);
+        return () => { if (ro) ro.disconnect(); };
+      }, [path]);
+      const copy = () => {
+        const done = () => { setCopied(true); setTimeout(() => setCopied(false), 1200); };
+        try { navigator.clipboard.writeText(path).then(done, () => {}); } catch { /* no clipboard */ }
+      };
+      return h('button', {
+        type: 'button', className: 'mf-path', ref, 'data-over': over ? '' : undefined, 'data-copied': copied ? '' : undefined,
+        title: `${path}\n点击复制完整路径`, 'aria-label': `复制路径 ${path}`, onClick: copy,
+      },
+      h('span', { className: 'mf-crumbs' },
+        parts.map((seg, i) => {
+          const last = i === parts.length - 1;
+          return h(React.Fragment, { key: i },
+            i > 0 ? h('span', { className: 'mf-sep', 'aria-hidden': true }, '/') : (lead ? h('span', { className: 'mf-sep', 'aria-hidden': true }, lead) : null),
+            h('span', { className: last ? 'mf-crumb mf-leaf' : 'mf-crumb' }, seg));
+        })),
+      h('span', { className: 'mf-copied', 'aria-live': 'polite' }, copied ? '已复制' : ''));
+    }
     function TextBody({ file }) {
       const [st, setSt] = React.useState({ text: '', lines: 0, eof: false, loading: true, error: null, absolutePath: undefined });
       const [reloadKey, setReloadKey] = React.useState(0);
@@ -5616,12 +5667,16 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
               key: f.address, className: `mf-tab${f === current ? ' mf-on' : ''}`, title: f.path,
               onMouseDown: (e) => { if (e.button === 1) { e.preventDefault(); closeFileTab(f.sessionId, f.address); } },
             },
-              h('button', { type: 'button', role: 'tab', 'aria-selected': String(f === current), className: 'mf-tab-name', onClick: () => select(f) }, f.name),
+              h('button', { type: 'button', role: 'tab', 'aria-selected': String(f === current), className: 'mf-tab-name', onClick: () => select(f) },
+                h(ExtBadge, { path: f.path }), h('span', { className: 'mf-tab-text' }, f.name)),
               fileTabs.dirty.has(f.address) ? h('span', { className: 'mf-dot', title: '有未保存的修改', 'aria-label': '未保存' }) : null,
               h('button', { type: 'button', className: 'mf-x', 'aria-label': `关闭 ${f.name}`, onClick: () => closeFileTab(f.sessionId, f.address) }, '×')))),
-          h('span', { className: 'mf-path', title: current.path }, current.path),
+          h(PathCrumbs, { path: current.path }),
           current.kind === 'review' ? null
-            : h('button', { type: 'button', className: 'mf-btn', title: '用 DSH 自带的侧边栏预览打开', onClick: () => sendToSidebar(current.address) }, '在侧边栏打开')),
+            : h('button', { type: 'button', className: 'mf-btn mf-btn-ghost', title: '用 DSH 自带的侧边栏预览打开', onClick: () => sendToSidebar(current.address) },
+              h('svg', { width: 14, height: 14, viewBox: '0 0 16 16', fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true },
+                h('rect', { x: 2.25, y: 2.75, width: 11.5, height: 10.5, rx: 2 }), h('path', { d: 'M10 2.75v10.5' })),
+              h('span', null, '在侧边栏打开'))),
         current.kind === 'review'
           ? h(ReviewBody, { key: current.address, file: current })
           : fileKind(current.path) === 'image'
@@ -5631,8 +5686,12 @@ html body[data-ds-dark-theme]:not([data-hanmo-native]) {
 
     const FILE_TAB_CSS = `
 .mf-root{display:flex;flex-direction:column;flex:1;min-height:0;min-width:0;color:var(--dsw-alias-label-primary);font-family:var(--dsw-font-family)}
-.mf-bar{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--dsw-alias-border-l1,rgba(127,127,127,.2));min-width:0;
-  position:sticky;top:0;z-index:7;flex:none;background:var(--dsw-alias-bg-base)}
+.mf-bar{--mf-ink:var(--dsw-alias-label-primary);--mf-acc:var(--cm-accent,var(--dsw-alias-brand-primary,#3a6df0));
+  display:flex;align-items:center;gap:10px;padding:6px 10px 6px 8px;min-width:0;min-height:44px;box-sizing:border-box;container-type:inline-size;
+  position:sticky;top:0;z-index:7;flex:none;
+  background:color-mix(in srgb,var(--dsw-alias-bg-base,#fff) 84%,transparent);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3);backdrop-filter:blur(14px) saturate(1.3);
+  box-shadow:inset 0 -1px 0 color-mix(in srgb,var(--mf-ink) 9%,transparent),0 6px 14px -12px color-mix(in srgb,var(--mf-ink) 30%,transparent)}
 /* pin the view to the visible height so only the file body scrolls (same
    trick DSH applies to its own composer-overlay layout); the sticky bar above
    is the fallback if the host markup differs */
@@ -5732,15 +5791,53 @@ body:not([data-hanmo-native]) [data-composer-dock] [class*="_root"]:has(> button
 @media (prefers-reduced-motion:reduce){.mf-seg{transition:none}}
 .mf-hl>.md-code-block{margin:0;--dsl-code-block-background:transparent;--dsl-code-block-border-radius:0px}
 .mf-hl>.md-code-block pre{padding:10px 16px;word-break:normal;overflow-wrap:anywhere}
-.mf-tabs{display:flex;gap:2px;min-width:0;overflow-x:auto;scrollbar-width:none;flex:0 1 auto}
-.mf-tab{display:flex;align-items:center;border-radius:7px;flex:none;max-width:220px}
-.mf-tab:hover{background:var(--dsw-alias-interactive-bg-hover)}
-.mf-tab.mf-on{background:var(--dsw-alias-interactive-bg-hover);box-shadow:inset 0 0 0 1px var(--dsw-alias-border-l2,rgba(127,127,127,.3))}
-.mf-tab-name{border:0;background:none;color:inherit;font:500 12.5px/1 var(--dsw-font-family);padding:7px 4px 7px 10px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mf-tab:not(.mf-on) .mf-tab-name{color:var(--dsw-alias-label-secondary)}
-.mf-x{border:0;background:none;color:var(--dsw-alias-label-tertiary);font-size:15px;line-height:1;width:20px;height:20px;margin-right:4px;border-radius:5px;cursor:pointer}
-.mf-x:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
-.mf-path{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:rtl;text-align:left;font:12px var(--ds-font-family-code,ui-monospace,monospace);color:var(--dsw-alias-label-tertiary)}
+.mf-tabs{display:flex;align-items:center;gap:3px;min-width:0;overflow-x:auto;scrollbar-width:none;flex:0 1 auto;padding:2px}
+.mf-tab{position:relative;display:flex;align-items:center;height:30px;border-radius:8px;flex:none;max-width:240px;
+  transition:background-color .15s ease,box-shadow .15s ease}
+.mf-tab:hover{background:color-mix(in srgb,var(--mf-ink) 5%,transparent)}
+.mf-tab.mf-on{background:var(--dsw-alias-bg-layer-1,var(--dsw-alias-bg-base,#fff));
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--mf-ink) 10%,transparent),0 1px 2px color-mix(in srgb,var(--mf-ink) 10%,transparent),0 4px 10px -6px color-mix(in srgb,var(--mf-ink) 22%,transparent)}
+.mf-tab.mf-on::after{content:"";position:absolute;left:10px;right:10px;bottom:-1px;height:2px;border-radius:2px;background:var(--mf-acc);
+  animation:mf-tabline .22s cubic-bezier(.3,.7,.2,1)}
+@keyframes mf-tabline{from{transform:scaleX(.3);opacity:0}}
+.mf-tab-name{display:flex;align-items:center;gap:7px;min-width:0;height:100%;border:0;background:none;color:var(--mf-ink);
+  font:600 12.5px/1 var(--dsw-font-family);padding:0 2px 0 8px;cursor:pointer;border-radius:8px;outline:none}
+.mf-tab-name:focus-visible{box-shadow:0 0 0 2px var(--mf-acc)}
+.mf-tab-text{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5}
+.mf-tab:not(.mf-on) .mf-tab-name{color:var(--dsw-alias-label-secondary);font-weight:500}
+.mf-ext{flex:none;display:inline-grid;place-items:center;min-width:22px;height:16px;padding:0 4px;border-radius:4px;box-sizing:border-box;
+  font:700 8.5px/1 var(--ds-font-family-code,ui-monospace,monospace);letter-spacing:.04em;
+  color:oklch(.5 .13 var(--mf-h));background:oklch(.62 .13 var(--mf-h) / .14);box-shadow:inset 0 0 0 .5px oklch(.55 .13 var(--mf-h) / .3)}
+:where([data-ds-dark-theme]) .mf-ext{color:oklch(.8 .11 var(--mf-h));background:oklch(.7 .12 var(--mf-h) / .16)}
+.mf-ext[data-plain]{color:var(--dsw-alias-label-tertiary);background:color-mix(in srgb,var(--mf-ink) 7%,transparent);box-shadow:none}
+.mf-tab:not(.mf-on) .mf-ext{filter:saturate(.7);opacity:.85}
+.mf-x{display:grid;place-items:center;border:0;background:none;color:var(--dsw-alias-label-tertiary);font-size:14px;line-height:1;width:20px;height:20px;margin:0 5px 0 2px;border-radius:5px;cursor:pointer;
+  opacity:.55;transition:opacity .12s,background-color .12s,color .12s}
+.mf-tab:hover .mf-x,.mf-tab.mf-on .mf-x,.mf-x:focus-visible{opacity:1}
+.mf-x:hover{color:var(--mf-ink);background:color-mix(in srgb,var(--mf-ink) 9%,transparent)}
+.mf-path{position:relative;flex:1 1 0;min-width:0;display:flex;justify-content:flex-end;align-items:center;height:28px;padding:0 10px;overflow:hidden;
+  border:0;border-radius:8px;cursor:copy;text-align:left;color:var(--dsw-alias-label-tertiary);
+  background:color-mix(in srgb,var(--mf-ink) 4%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--mf-ink) 6%,transparent);
+  font:12px/1 var(--ds-font-family-code,ui-monospace,monospace);transition:background-color .15s,box-shadow .15s}
+.mf-path:hover{background:color-mix(in srgb,var(--mf-ink) 6.5%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--mf-ink) 11%,transparent)}
+.mf-path:focus-visible{outline:none;box-shadow:0 0 0 2px var(--mf-acc)}
+.mf-path[data-over]{-webkit-mask-image:linear-gradient(90deg,transparent 4px,#000 40px);mask-image:linear-gradient(90deg,transparent 4px,#000 40px)}
+.mf-path[data-over] .mf-crumbs{justify-content:flex-end}
+.mf-crumbs{display:flex;align-items:center;min-width:0;flex:none;white-space:nowrap}
+.mf-path:not([data-over]){justify-content:flex-start}
+.mf-crumb{flex:none}
+.mf-sep{flex:none;margin:0 4px;opacity:.38}
+.mf-leaf{color:var(--mf-ink);font-weight:600}
+.mf-copied{position:absolute;right:8px;top:50%;transform:translateY(-50%);padding:3px 8px;border-radius:99px;font:600 11px/1 var(--dsw-font-family);
+  color:#fff;background:var(--mf-acc);opacity:0;pointer-events:none;transition:opacity .15s}
+.mf-path[data-copied] .mf-copied{opacity:1}
+.mf-btn-ghost{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 8px;border-radius:8px;
+  border:1px solid color-mix(in srgb,var(--mf-ink) 12%,transparent);background:color-mix(in srgb,var(--dsw-alias-bg-base,#fff) 70%,transparent);
+  color:var(--dsw-alias-label-secondary);font:500 12px/1 var(--dsw-font-family);transition:color .15s,border-color .15s,background-color .15s,transform .15s}
+.mf-btn-ghost:hover{color:var(--mf-acc);border-color:color-mix(in srgb,var(--mf-acc) 45%,transparent);background:color-mix(in srgb,var(--mf-acc) 8%,transparent)}
+.mf-btn-ghost:active{transform:translateY(1px)}
+@container (max-width:560px){.mf-btn-ghost span{display:none}.mf-btn-ghost{padding:0 7px}}
+@media (prefers-reduced-motion:reduce){.mf-tab.mf-on::after{animation:none}.mf-tab,.mf-path,.mf-btn-ghost,.mf-x{transition:none}}
 .mf-btn{flex:none;border:1px solid var(--dsw-alias-border-l2,rgba(127,127,127,.3));background:none;color:var(--dsw-alias-label-secondary);font:12px/1 var(--dsw-font-family);padding:6px 10px;border-radius:7px;cursor:pointer}
 .mf-btn:hover{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-interactive-bg-hover)}
 .mf-scroll{flex:1;min-height:0;overflow:auto}
